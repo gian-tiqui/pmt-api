@@ -1,0 +1,123 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Department {
+  id          Int       @id @default(autoincrement())
+  name        String    @unique
+  description String?
+  users       User[]    
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model User {
+  id           Int          @id @default(autoincrement())
+  email        String       @unique
+  password     String
+  firstName    String
+  lastName     String
+  departmentId Int?
+  department   Department?  @relation(fields: [departmentId], references: [id])
+  comments     Comment[]
+  createdWorks Work[]
+  tasks        Task[]
+  subTasks     Subtask[]
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  authoredProjects Project[]
+  deadlineExtensions DeadlineExtensions[]
+}
+
+model Comment {
+  id           Int       @id @default(autoincrement())
+  message      String
+  userId       Int
+  user         User      @relation(fields: [userId], references: [id])
+  taskId       Int?
+  task         Task?     @relation(fields: [taskId], references: [id])
+  mentions     String[] 
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model Subtask {
+  id           Int       @id @default(autoincrement())
+  type         String
+  status       String    
+  description  String?
+  title        String
+  userId       Int?
+  user         User?     @relation(fields: [userId], references: [id])
+  startDate    DateTime?
+  endDate      DateTime?
+  taskId       Int
+  task         Task      @relation(fields: [taskId], references: [id])
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model Task {
+  id           Int        @id @default(autoincrement())
+  type         String
+  status       String     
+  description  String?
+  title        String
+  startDate    DateTime?
+  endDate      DateTime?
+  subtasks     Subtask[]
+  workId       Int
+  work         Work       @relation(fields: [workId], references: [id])
+  comments     Comment[]
+  assignedTo   User?      @relation(fields: [assignedToId], references: [id])
+  assignedToId Int?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+model Work {
+  id           Int        @id @default(autoincrement())
+  name         String
+  type         String
+  description  String?
+  createdById  Int
+  createdBy    User       @relation(fields: [createdById], references: [id])
+  tasks        Task[]
+  projectId    Int
+  project      Project    @relation(fields: [projectId], references: [id])
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+model Project {
+  id           Int       @id @default(autoincrement())
+  name         String
+  status       String   
+  startDate    DateTime?
+  endDate      DateTime?
+  title        String
+  description  String?
+  tasks        Work[]
+  authorId     Int
+  author       User      @relation(fields: [authorId], references: [id])
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model DeadlineExtensions {
+  id           Int       @id @default(autoincrement())
+  extendedBy   Int
+
+  user         User @relation(fields: [extendedBy], references: [id])
+}
