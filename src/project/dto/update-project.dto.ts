@@ -1,4 +1,21 @@
-import { PartialType } from '@nestjs/mapped-types';
-import { CreateProjectDto } from './create-project.dto';
+import { IsNotEmpty, IsOptional } from 'class-validator';
 
-export class UpdateProjectDto extends PartialType(CreateProjectDto) {}
+export class UpdateProjectDto {
+  @IsOptional()
+  name: string;
+
+  @IsNotEmpty()
+  status: string;
+
+  @IsOptional()
+  startDate: Date;
+
+  @IsOptional()
+  endDate: Date;
+
+  @IsOptional()
+  title: string;
+
+  @IsOptional()
+  description: string;
+}
