@@ -8,12 +8,12 @@ datasource db {
 }
 
 model Department {
-  id          Int       @id @default(autoincrement())
-  code        String    @unique
-  description String?
-  users       User[]    
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id           Int         @id @default(autoincrement())
+  code         String      @unique
+  description  String?
+  users        User[]    
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
 }
 
 model User {
@@ -33,6 +33,7 @@ model User {
   updatedAt    DateTime     @updatedAt
   authoredProjects Project[]
   deadlineExtensions DeadlineExtensions[]
+  edits        EditLogs[]
 }
 
 model Comment {
@@ -113,6 +114,25 @@ model Project {
 model DeadlineExtensions {
   id           Int       @id @default(autoincrement())
   extendedBy   Int
+  user         User      @relation(fields: [extendedBy], references: [id])
+  createdAt    DateTime
+  updatedAt    DateTime  @updatedAt
+}
 
-  user         User @relation(fields: [extendedBy], references: [id])
+model EditLogs { 
+  id           Int        @id @default(autoincrement())
+  editedBy     Int        
+  editor       User       @relation(fields: [editedBy], references: [id])
+  editTypeId   Int
+  logs         Json
+  createdAt    DateTime
+  updatedAt    DateTime   @updatedAt
+  
+}
+
+model EditType {
+  id           Int       @id @default(autoincrement())
+  type         String    @unique
+  createdAt    DateTime  
+  updatedAt    DateTime  @updatedAt
 }

@@ -6,6 +6,7 @@ import { SubtaskModule } from './subtask/subtask.module';
 import { CommentModule } from './comment/comment.module';
 import { UserModule } from './user/user.module';
 import { DepartmentModule } from './department/department.module';
+import { ConfigModule } from '@nestjs/config';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { DepartmentModule } from './department/department.module';
     CommentModule,
     UserModule,
     DepartmentModule,
+    ConfigModule.forRoot({ isGlobal: true }),
   ],
   controllers: [],
   providers: [],
