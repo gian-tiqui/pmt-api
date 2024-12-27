@@ -9,7 +9,7 @@ datasource db {
 
 model Department {
   id          Int       @id @default(autoincrement())
-  name        String    @unique
+  code        String    @unique
   description String?
   users       User[]    
   createdAt   DateTime  @default(now())
@@ -21,6 +21,7 @@ model User {
   email        String       @unique
   password     String
   firstName    String
+  middleName   String
   lastName     String
   departmentId Int?
   department   Department?  @relation(fields: [departmentId], references: [id])
