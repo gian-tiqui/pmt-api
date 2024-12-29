@@ -18,4 +18,7 @@ export class UpdateProjectDto {
 
   @IsOptional()
   description: string;
+
+  @IsNotEmpty()
+  userId: string;
 }

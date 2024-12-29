@@ -3,6 +3,7 @@ import {
   Injectable,
   InternalServerErrorException,
   NotFoundException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
@@ -23,13 +24,11 @@ export class ProjectService {
           description: createProjectDto.description,
           startDate: createProjectDto.startDate,
           endDate: createProjectDto.endDate,
-          createdAt: new Date(),
-          updatedAt: new Date(),
           status: '',
         },
       });
 
-      return { message: 'Project created successfully', project: newProject };
+      return { message: 'Project created successfully.', project: newProject };
     } catch (error) {
       console.error(error);
 
@@ -38,12 +37,9 @@ export class ProjectService {
   }
 
   async findAll(
-    name: string,
     status: string,
     startDate: Date,
     endDate: Date,
-    title: string,
-    description: string,
     authorId: number,
     search: string,
     offset: number,
@@ -51,12 +47,9 @@ export class ProjectService {
   ) {
     try {
       const options = {
-        ...(name && { name: name }),
         ...(status && { status }),
         ...(startDate && { startDate }),
         ...(endDate && { endDate }),
-        ...(title && { title }),
-        ...(description && { description }),
         ...(authorId && { authorId }),
         ...(search && {
           OR: [
@@ -79,10 +72,7 @@ export class ProjectService {
         take: limit,
       });
 
-      if (projects.length === 0)
-        return { message: 'There are no projects yet.', statusCode: 200 };
-
-      return { message: 'Projects loaded successfully', projects, count };
+      return { message: 'Projects loaded successfully.', projects, count };
     } catch (error) {
       console.error('Error', error);
 
@@ -97,9 +87,54 @@ export class ProjectService {
       });
 
       if (!project)
+        throw new NotFoundException(`Project with the id ${id} not found.`);
+
+      return { message: 'Project loaded successfully.', project };
+    } catch (error) {
+      console.error(error);
+
+      throw new InternalServerErrorException(internalServerErrorMessage);
+    }
+  }
+
+  async findOneIncludeWorks(
+    id: number,
+    offset: number,
+    limit: number,
+    search: string,
+  ) {
+    try {
+      const options = {
+        ...(search && {
+          OR: [
+            { name: { contains: search.toLowerCase() } },
+            { description: { contains: search.toLowerCase() } },
+          ],
+        }),
+      };
+
+      const project = await this.prismaService.project.findFirst({
+        where: { id },
+        include: {
+          works: {
+            where: options,
+            skip: offset,
+            take: limit,
+          },
+        },
+      });
+
+      if (!project)
         throw new NotFoundException(`Project with the id ${id} not found`);
 
-      return { message: 'Project loaded successfully', project };
+      const { works } = project;
+      const count = works.length;
+
+      return {
+        works,
+        count,
+        message: 'Works of the Project loaded successfully',
+      };
     } catch (error) {
       console.error(error);
 
@@ -108,7 +143,39 @@ export class ProjectService {
   }
 
   async update(id: number, updateProjectDto: UpdateProjectDto) {
-    return `This action updates a #${id} project`;
+    try {
+      const project = await this.prismaService.project.findFirst({
+        where: { id },
+      });
+
+      if (!project)
+        throw new NotFoundException(`Project with the id ${id} not found.`);
+
+      const user = await this.prismaService.user.findFirst({
+        where: { id: +updateProjectDto.userId },
+      });
+
+      if (!user)
+        throw new NotFoundException(`User with the id ${id} not found.`);
+
+      delete updateProjectDto.userId;
+
+      const updatedProject = await this.prismaService.project.update({
+        where: { id },
+        data: { ...updateProjectDto },
+      });
+
+      if (!updatedProject)
+        throw new ConflictException(
+          'There was a problem in updating the project.',
+        );
+
+      return `Project updated successfully`;
+    } catch (error) {
+      console.error(error);
+
+      throw new InternalServerErrorException(internalServerErrorMessage);
+    }
   }
 
   async remove(id: number, userId: number) {
@@ -118,7 +185,7 @@ export class ProjectService {
       });
 
       if (!project)
-        throw new NotFoundException(`Project with the id ${id} not found`);
+        throw new NotFoundException(`Project with the id ${id} not found.`);
 
       const deletedProject = await this.prismaService.project.delete({
         where: { id },
@@ -126,18 +193,23 @@ export class ProjectService {
 
       if (!deletedProject)
         throw new ConflictException(
-          'There was a problem in deleting the project',
+          'There was a problem in deleting the project.',
         );
 
-      // continue this next week make the code clean
+      const deletedLog = await this.prismaService.editLogs.create({
+        data: {
+          editedBy: userId,
+          logs: project,
+          editTypeId: 1,
+        },
+      });
 
-      // this.prismaService.editLogs.create({
-      //   data: {
-      //     editedBy: userId,
-      //   },
-      // });
+      if (!deletedLog)
+        throw new UnprocessableEntityException(
+          'There was a problem in creating the log.',
+        );
 
-      return { message: 'Project deleted successfully' };
+      return { message: 'Project deleted successfully.' };
     } catch (error) {
       console.error(error);
 

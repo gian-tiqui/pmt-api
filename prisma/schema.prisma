@@ -54,12 +54,13 @@ model Subtask {
   status       String    
   description  String?
   title        String
-  userId       Int?
-  user         User?     @relation(fields: [userId], references: [id])
+  assignedToId Int?
+  assigedTo    User?     @relation(fields: [assignedToId], references: [id])
   startDate    DateTime?
   endDate      DateTime?
   taskId       Int
   task         Task      @relation(fields: [taskId], references: [id])
+  currentTask  Boolean   @default(false)
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 }
@@ -99,12 +100,12 @@ model Work {
 model Project {
   id           Int       @id @default(autoincrement())
   name         String
-  status       String   
+  status       String  
   startDate    DateTime?
   endDate      DateTime?
   title        String
   description  String?
-  tasks        Work[]
+  works        Work[]
   authorId     Int
   author       User      @relation(fields: [authorId], references: [id])
   createdAt    DateTime  @default(now())
@@ -115,7 +116,7 @@ model DeadlineExtensions {
   id           Int       @id @default(autoincrement())
   extendedBy   Int
   user         User      @relation(fields: [extendedBy], references: [id])
-  createdAt    DateTime
+  createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 }
 
@@ -125,7 +126,7 @@ model EditLogs {
   editor       User       @relation(fields: [editedBy], references: [id])
   editTypeId   Int
   logs         Json
-  createdAt    DateTime
+  createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
   
 }
@@ -133,6 +134,6 @@ model EditLogs {
 model EditType {
   id           Int       @id @default(autoincrement())
   type         String    @unique
-  createdAt    DateTime  
+  createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 }
