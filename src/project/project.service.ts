@@ -45,24 +45,44 @@ export class ProjectService {
     title: string,
     description: string,
     authorId: number,
+    search: string,
+    offset: number,
+    limit: number,
   ) {
     try {
+      const options = {
+        ...(name && { name: name }),
+        ...(status && { status }),
+        ...(startDate && { startDate }),
+        ...(endDate && { endDate }),
+        ...(title && { title }),
+        ...(description && { description }),
+        ...(authorId && { authorId }),
+        ...(search && {
+          OR: [
+            { name: { contains: search.toLowerCase() } },
+            { title: { contains: search.toLowerCase() } },
+            { description: { contains: search.toLowerCase() } },
+          ],
+        }),
+      };
+
       const projects = await this.prismaService.project.findMany({
-        where: {
-          ...(name && { name: name }),
-          ...(status && { status }),
-          ...(startDate && { startDate }),
-          ...(endDate && { endDate }),
-          ...(title && { title }),
-          ...(description && { description }),
-          ...(authorId && { authorId }),
-        },
+        where: options,
+        skip: offset,
+        take: limit,
+      });
+
+      const count = await this.prismaService.project.count({
+        where: options,
+        skip: offset,
+        take: limit,
       });
 
       if (projects.length === 0)
         return { message: 'There are no projects yet.', statusCode: 200 };
 
-      return { message: 'Projects loaded successfully', projects };
+      return { message: 'Projects loaded successfully', projects, count };
     } catch (error) {
       console.error('Error', error);
 

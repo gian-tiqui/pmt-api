@@ -36,6 +36,9 @@ export class ProjectController {
     @Query('title') title: string = undefined,
     @Query('description') description: string = undefined,
     @Query('authorId') authorId: string = undefined,
+    @Query('search') search: string = '',
+    @Query('offset') offset: number = 10,
+    @Query('limit') limit: number = 10,
   ) {
     const convertedAuthorId = parseInt(authorId, 10);
 
@@ -50,6 +53,9 @@ export class ProjectController {
       title,
       description,
       convertedAuthorId,
+      search,
+      offset,
+      limit,
     );
   }
 
