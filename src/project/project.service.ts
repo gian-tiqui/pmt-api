@@ -97,7 +97,7 @@ export class ProjectService {
     }
   }
 
-  async findOneIncludeWorks(
+  async findOneWorks(
     id: number,
     offset: number,
     limit: number,
