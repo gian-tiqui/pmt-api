@@ -11,6 +11,10 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { internalServerErrorMessage } from 'src/utils/messages';
 import { FindAllProjectsDto } from './dto/find-all-project.dto';
 import { FindOneWorksDto } from './dto/find-one-works.dto';
+import { getPreviousValues } from 'src/utils/functions';
+import { DELETE_METHOD_ID, UPDATE_METHOD_ID } from 'src/utils/ids';
+
+const EDIT_TYPE_ID = 3;
 
 @Injectable()
 export class ProjectService {
@@ -97,7 +101,7 @@ export class ProjectService {
     }
   }
 
-  async findOneWorks(id: number, query: FindOneWorksDto) {
+  async findWorks(id: number, query: FindOneWorksDto) {
     const { offset, limit, search } = query;
     try {
       const options = {
@@ -156,6 +160,8 @@ export class ProjectService {
       if (!user)
         throw new NotFoundException(`User with the id ${id} not found.`);
 
+      const userId = updateProjectDto.userId;
+
       delete updateProjectDto.userId;
 
       const updatedProject = await this.prismaService.project.update({
@@ -166,6 +172,20 @@ export class ProjectService {
       if (!updatedProject)
         throw new ConflictException(
           'There was a problem in updating the project.',
+        );
+
+      const updatedProjectLog = await this.prismaService.log.create({
+        data: {
+          logMethodId: UPDATE_METHOD_ID,
+          logTypeId: EDIT_TYPE_ID,
+          editedBy: userId,
+          logs: getPreviousValues(project, updateProjectDto),
+        },
+      });
+
+      if (!updatedProjectLog)
+        throw new ConflictException(
+          'There was a problem in creating a log for the project',
         );
 
       return { message: `Project updated successfully` };
@@ -203,11 +223,12 @@ export class ProjectService {
           'There was a problem in deleting the project.',
         );
 
-      const deletedLog = await this.prismaService.editLogs.create({
+      const deletedLog = await this.prismaService.log.create({
         data: {
           editedBy: userId,
           logs: project,
-          editTypeId: 1,
+          logTypeId: EDIT_TYPE_ID,
+          logMethodId: DELETE_METHOD_ID,
         },
       });
 

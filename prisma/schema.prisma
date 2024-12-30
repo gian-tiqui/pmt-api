@@ -21,7 +21,7 @@ model User {
   email        String       @unique
   password     String
   firstName    String
-  middleName   String
+  middleName   String?
   lastName     String
   departmentId Int?
   department   Department?  @relation(fields: [departmentId], references: [id])
@@ -33,7 +33,7 @@ model User {
   updatedAt    DateTime     @updatedAt
   authoredProjects Project[]
   deadlineExtensions DeadlineExtensions[]
-  edits        EditLogs[]
+  logs        Log[]
 }
 
 model Comment {
@@ -120,20 +120,32 @@ model DeadlineExtensions {
   updatedAt    DateTime  @updatedAt
 }
 
-model EditLogs { 
+model Log { 
   id           Int        @id @default(autoincrement())
   editedBy     Int        
   editor       User       @relation(fields: [editedBy], references: [id])
-  editTypeId   Int
+  logTypeId    Int
+  logType      LogType    @relation(fields: [logTypeId], references: [id])   
+  logMethodId  Int
+  logMethod    LogMethod  @relation(fields: [logMethodId], references: [id]) 
   logs         Json
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
   
 }
 
-model EditType {
+model LogType {
   id           Int       @id @default(autoincrement())
   type         String    @unique
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+  logs         Log[]
+}
+
+model LogMethod {
+  id           Int       @id @default(autoincrement())
+  method       String    @unique
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  logs         Log[]
 }

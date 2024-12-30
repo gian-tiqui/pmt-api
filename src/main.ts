@@ -1,6 +1,5 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { yap } from './utils/messages';
 import { ValidationPipe, VersioningType } from '@nestjs/common';
 // import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
@@ -47,7 +46,9 @@ async function bootstrap() {
   );
 
   await app
-    .listen(PORT, '0.0.0.0', () => yap(`Server started at port ${PORT}`))
+    .listen(PORT, '0.0.0.0', () =>
+      console.log(`Server started at port ${PORT}`),
+    )
     .catch((error) => {
       console.error(error);
     });

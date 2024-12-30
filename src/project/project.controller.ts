@@ -20,41 +20,41 @@ export class ProjectController {
   constructor(private readonly projectService: ProjectService) {}
 
   @Post()
-  create(@Body() createProjectDto: CreateProjectDto) {
+  createProject(@Body() createProjectDto: CreateProjectDto) {
     return this.projectService.create(createProjectDto);
   }
 
   @Get()
-  findAll(@Query('') query: FindAllProjectsDto) {
+  findAllProjects(@Query('') query: FindAllProjectsDto) {
     return this.projectService.findAll(query);
   }
 
-  @Get(':id')
-  findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.projectService.findOne(id);
+  @Get(':projectId')
+  findOneProject(@Param('projectId', ParseIntPipe) projectId: number) {
+    return this.projectService.findOne(projectId);
   }
 
-  @Get(':id/work/')
-  findOneWorks(
-    @Param('id', ParseIntPipe) id: number,
+  @Get(':projectId/work/')
+  findAllWorks(
+    @Param('id', ParseIntPipe) projectId: number,
     @Query() query: FindOneWorksDto,
   ) {
-    return this.projectService.findOneWorks(id, query);
+    return this.projectService.findWorks(projectId, query);
   }
 
-  @Patch(':id')
-  update(
-    @Param('id', ParseIntPipe) id: number,
+  @Patch(':projectId')
+  updateProject(
+    @Param('projectId', ParseIntPipe) projectId: number,
     @Body() updateProjectDto: UpdateProjectDto,
   ) {
-    return this.projectService.update(id, updateProjectDto);
+    return this.projectService.update(projectId, updateProjectDto);
   }
 
-  @Delete(':id')
-  remove(
-    @Param('id', ParseIntPipe) id: number,
+  @Delete(':projectId')
+  removeProject(
+    @Param('projectId', ParseIntPipe) projectId: number,
     @Query('userId', ParseIntPipe) userId: number,
   ) {
-    return this.projectService.remove(id, userId);
+    return this.projectService.remove(projectId, userId);
   }
 }
