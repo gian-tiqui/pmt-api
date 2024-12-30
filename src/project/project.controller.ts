@@ -12,6 +12,8 @@ import {
 import { ProjectService } from './project.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
+import { FindAllProjectsDto } from './dto/find-all-project.dto';
+import { FindOneWorksDto } from './dto/find-one-works.dto';
 
 @Controller('project')
 export class ProjectController {
@@ -23,24 +25,8 @@ export class ProjectController {
   }
 
   @Get()
-  findAll(
-    @Query('status') status: string = undefined,
-    @Query('startDate') startDate: Date = undefined,
-    @Query('endDate') endDate: Date = undefined,
-    @Query('authorId', ParseIntPipe) authorId: number = undefined,
-    @Query('search') search: string = '',
-    @Query('offset', ParseIntPipe) offset: number = 10,
-    @Query('limit', ParseIntPipe) limit: number = 10,
-  ) {
-    return this.projectService.findAll(
-      status,
-      startDate,
-      endDate,
-      authorId,
-      search,
-      offset,
-      limit,
-    );
+  findAll(@Query('') query: FindAllProjectsDto) {
+    return this.projectService.findAll(query);
   }
 
   @Get(':id')
@@ -51,11 +37,9 @@ export class ProjectController {
   @Get(':id/work/')
   findOneWorks(
     @Param('id', ParseIntPipe) id: number,
-    @Query('offset', ParseIntPipe) offset: number,
-    @Query('limit', ParseIntPipe) limit: number,
-    @Query('search', ParseIntPipe) search: string,
+    @Query() query: FindOneWorksDto,
   ) {
-    return this.projectService.findOneWorks(id, offset, limit, search);
+    return this.projectService.findOneWorks(id, query);
   }
 
   @Patch(':id')

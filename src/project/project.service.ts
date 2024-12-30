@@ -9,6 +9,8 @@ import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { internalServerErrorMessage } from 'src/utils/messages';
+import { FindAllProjectsDto } from './dto/find-all-project.dto';
+import { FindOneWorksDto } from './dto/find-one-works.dto';
 
 @Injectable()
 export class ProjectService {
@@ -36,15 +38,10 @@ export class ProjectService {
     }
   }
 
-  async findAll(
-    status: string,
-    startDate: Date,
-    endDate: Date,
-    authorId: number,
-    search: string,
-    offset: number,
-    limit: number,
-  ) {
+  async findAll(query: FindAllProjectsDto) {
+    const { status, startDate, endDate, authorId, search, limit, offset } =
+      query;
+
     try {
       const options = {
         ...(status && { status }),
@@ -86,23 +83,22 @@ export class ProjectService {
         where: { id },
       });
 
-      if (!project)
+      if (!project) {
         throw new NotFoundException(`Project with the id ${id} not found.`);
+      }
 
       return { message: 'Project loaded successfully.', project };
     } catch (error) {
       console.error(error);
 
-      throw new InternalServerErrorException(internalServerErrorMessage);
+      if (error instanceof NotFoundException) throw error;
+
+      throw new InternalServerErrorException('An unexpected error occurred.');
     }
   }
 
-  async findOneWorks(
-    id: number,
-    offset: number,
-    limit: number,
-    search: string,
-  ) {
+  async findOneWorks(id: number, query: FindOneWorksDto) {
+    const { offset, limit, search } = query;
     try {
       const options = {
         ...(search && {
@@ -138,6 +134,8 @@ export class ProjectService {
     } catch (error) {
       console.error(error);
 
+      if (error instanceof NotFoundException) throw error;
+
       throw new InternalServerErrorException(internalServerErrorMessage);
     }
   }
@@ -170,9 +168,11 @@ export class ProjectService {
           'There was a problem in updating the project.',
         );
 
-      return `Project updated successfully`;
+      return { message: `Project updated successfully` };
     } catch (error) {
       console.error(error);
+
+      if (error instanceof NotFoundException) throw error;
 
       throw new InternalServerErrorException(internalServerErrorMessage);
     }
@@ -180,6 +180,13 @@ export class ProjectService {
 
   async remove(id: number, userId: number) {
     try {
+      const user = await this.prismaService.user.findFirst({
+        where: { id: userId },
+      });
+
+      if (!user)
+        throw new NotFoundException(`User with the id ${id} not found`);
+
       const project = await this.prismaService.project.findFirst({
         where: { id },
       });
@@ -212,6 +219,8 @@ export class ProjectService {
       return { message: 'Project deleted successfully.' };
     } catch (error) {
       console.error(error);
+
+      if (error instanceof NotFoundException) throw error;
 
       throw new InternalServerErrorException(internalServerErrorMessage);
     }
