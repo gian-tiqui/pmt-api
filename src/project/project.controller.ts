@@ -67,6 +67,14 @@ export class ProjectController {
     return this.projectService.findWorks(projectId, query);
   }
 
+  @Get(':projectId/work/:workId')
+  findOneWork(
+    @Param('projectId', ParseIntPipe) projectId: number,
+    @Param('workId', ParseIntPipe) workId: number,
+  ) {
+    return this.projectService.findWork(projectId, workId);
+  }
+
   @RateLimit({
     keyPrefix: 'update-project',
     points: 10,
