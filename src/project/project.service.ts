@@ -12,7 +12,7 @@ import { internalServerErrorMessage } from 'src/utils/messages';
 import { FindAllProjectsDto } from './dto/find-all-project.dto';
 import { FindOneWorksDto } from './dto/find-one-works.dto';
 import { getPreviousValues } from 'src/utils/functions';
-import { DELETE_METHOD_ID, UPDATE_METHOD_ID } from 'src/utils/ids';
+import { LogMethod } from 'src/utils/enums';
 
 const EDIT_TYPE_ID = 3;
 
@@ -81,14 +81,16 @@ export class ProjectService {
     }
   }
 
-  async findOne(id: number) {
+  async findOne(projectId: number) {
     try {
       const project = await this.prismaService.project.findFirst({
-        where: { id },
+        where: { id: projectId },
       });
 
       if (!project) {
-        throw new NotFoundException(`Project with the id ${id} not found.`);
+        throw new NotFoundException(
+          `Project with the id ${projectId} not found.`,
+        );
       }
 
       return { message: 'Project loaded successfully.', project };
@@ -101,7 +103,7 @@ export class ProjectService {
     }
   }
 
-  async findWorks(id: number, query: FindOneWorksDto) {
+  async findWorks(projectId: number, query: FindOneWorksDto) {
     const { offset, limit, search } = query;
     try {
       const options = {
@@ -113,22 +115,23 @@ export class ProjectService {
         }),
       };
 
-      const project = await this.prismaService.project.findFirst({
-        where: { id },
-        include: {
-          works: {
-            where: options,
-            skip: offset,
-            take: limit,
-          },
+      const works = await this.prismaService.work.findMany({
+        where: {
+          projectId: projectId,
+          ...options,
         },
+        skip: offset,
+        take: limit,
       });
 
-      if (!project)
-        throw new NotFoundException(`Project with the id ${id} not found`);
-
-      const { works } = project;
-      const count = works.length;
+      const count = await this.prismaService.work.count({
+        where: {
+          projectId: projectId,
+          ...options,
+        },
+        skip: offset,
+        take: limit,
+      });
 
       return {
         works,
@@ -144,28 +147,61 @@ export class ProjectService {
     }
   }
 
-  async update(id: number, updateProjectDto: UpdateProjectDto) {
+  async findWork(projectId: number, workId: number) {
     try {
       const project = await this.prismaService.project.findFirst({
-        where: { id },
+        where: { id: projectId },
       });
 
       if (!project)
-        throw new NotFoundException(`Project with the id ${id} not found.`);
+        throw new NotFoundException(
+          `Project with the id ${projectId} not found.`,
+        );
+
+      const work = await this.prismaService.work.findFirst({
+        where: { AND: [{ id: workId }, { projectId: projectId }] },
+      });
+
+      if (!work)
+        throw new NotFoundException(`Work with the id ${workId} not found.`);
+
+      return {
+        message: 'Work of the project successfully loaded.',
+        work,
+      };
+    } catch (error) {
+      console.error(error);
+
+      if (error instanceof NotFoundException) throw error;
+
+      throw new InternalServerErrorException(internalServerErrorMessage);
+    }
+  }
+
+  async update(projectId: number, updateProjectDto: UpdateProjectDto) {
+    try {
+      const project = await this.prismaService.project.findFirst({
+        where: { id: projectId },
+      });
+
+      if (!project)
+        throw new NotFoundException(
+          `Project with the id ${projectId} not found.`,
+        );
 
       const user = await this.prismaService.user.findFirst({
         where: { id: +updateProjectDto.userId },
       });
 
       if (!user)
-        throw new NotFoundException(`User with the id ${id} not found.`);
+        throw new NotFoundException(`User with the id ${projectId} not found.`);
 
       const userId = updateProjectDto.userId;
 
       delete updateProjectDto.userId;
 
       const updatedProject = await this.prismaService.project.update({
-        where: { id },
+        where: { id: projectId },
         data: { ...updateProjectDto },
       });
 
@@ -176,7 +212,7 @@ export class ProjectService {
 
       const updatedProjectLog = await this.prismaService.log.create({
         data: {
-          logMethodId: UPDATE_METHOD_ID,
+          logMethodId: LogMethod.UPDATE,
           logTypeId: EDIT_TYPE_ID,
           editedBy: userId,
           logs: getPreviousValues(project, updateProjectDto),
@@ -198,24 +234,26 @@ export class ProjectService {
     }
   }
 
-  async remove(id: number, userId: number) {
+  async remove(projectId: number, userId: number) {
     try {
       const user = await this.prismaService.user.findFirst({
         where: { id: userId },
       });
 
       if (!user)
-        throw new NotFoundException(`User with the id ${id} not found`);
+        throw new NotFoundException(`User with the id ${userId} not found`);
 
       const project = await this.prismaService.project.findFirst({
-        where: { id },
+        where: { id: projectId },
       });
 
       if (!project)
-        throw new NotFoundException(`Project with the id ${id} not found.`);
+        throw new NotFoundException(
+          `Project with the id ${projectId} not found.`,
+        );
 
       const deletedProject = await this.prismaService.project.delete({
-        where: { id },
+        where: { id: projectId },
       });
 
       if (!deletedProject)
@@ -228,7 +266,7 @@ export class ProjectService {
           editedBy: userId,
           logs: project,
           logTypeId: EDIT_TYPE_ID,
-          logMethodId: DELETE_METHOD_ID,
+          logMethodId: LogMethod.DELETE,
         },
       });
 
