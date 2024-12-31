@@ -26,7 +26,6 @@ export class ProjectService {
       const newProject = await this.prismaService.project.create({
         data: {
           name: createProjectDto.name,
-          title: createProjectDto.title,
           authorId: createProjectDto.authorId,
           description: createProjectDto.description,
           startDate: createProjectDto.startDate,
@@ -105,7 +104,7 @@ export class ProjectService {
   }
 
   async findProjectWorks(projectId: number, query: FindAllDto) {
-    const { offset, limit, search } = query;
+    const { offset, limit, search, type } = query;
     try {
       const options = {
         ...(search && {
@@ -119,6 +118,7 @@ export class ProjectService {
       const works = await this.prismaService.work.findMany({
         where: {
           projectId: projectId,
+          type,
           ...options,
         },
         skip: offset || PaginationDefault.OFFSET,

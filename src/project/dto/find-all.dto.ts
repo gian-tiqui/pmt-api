@@ -28,6 +28,10 @@ export class FindAllDto {
 
   @IsOptional()
   @IsString()
+  type?: string;
+
+  @IsOptional()
+  @IsString()
   search?: string;
 
   @IsOptional()
