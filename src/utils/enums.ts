@@ -9,4 +9,8 @@ enum PaginationDefault {
   LIMIT = 10,
 }
 
-export { LogMethod, PaginationDefault };
+enum Status {
+  PENDING = 'pending',
+}
+
+export { LogMethod, PaginationDefault, Status };

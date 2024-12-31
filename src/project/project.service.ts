@@ -11,7 +11,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { internalServerErrorMessage } from 'src/utils/messages';
 import { FindAllDto } from './dto/find-all.dto';
 import { getPreviousValues } from 'src/utils/functions';
-import { LogMethod, PaginationDefault } from 'src/utils/enums';
+import { LogMethod, PaginationDefault, Status } from 'src/utils/enums';
 
 const EDIT_TYPE_ID = 3;
 
@@ -30,7 +30,7 @@ export class ProjectService {
           description: createProjectDto.description,
           startDate: createProjectDto.startDate,
           endDate: createProjectDto.endDate,
-          status: '',
+          status: Status.PENDING,
         },
       });
 
@@ -98,7 +98,6 @@ export class ProjectService {
       this.logger.error(error);
 
       if (error instanceof NotFoundException) throw error;
-
       throw new InternalServerErrorException('An unexpected error occurred.');
     }
   }
@@ -143,7 +142,6 @@ export class ProjectService {
       this.logger.error(error);
 
       if (error instanceof NotFoundException) throw error;
-
       throw new InternalServerErrorException(internalServerErrorMessage);
     }
   }
@@ -167,7 +165,6 @@ export class ProjectService {
       this.logger.error(error);
 
       if (error instanceof NotFoundException) throw error;
-
       throw new InternalServerErrorException(internalServerErrorMessage);
     }
   }
@@ -223,7 +220,6 @@ export class ProjectService {
       this.logger.error(error);
 
       if (error instanceof NotFoundException) throw error;
-
       throw new InternalServerErrorException(internalServerErrorMessage);
     }
   }
@@ -274,7 +270,6 @@ export class ProjectService {
       this.logger.error(error);
 
       if (error instanceof NotFoundException) throw error;
-
       throw new InternalServerErrorException(internalServerErrorMessage);
     }
   }

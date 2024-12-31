@@ -1,3 +1,4 @@
+import { Type } from 'class-transformer';
 import {
   IsDate,
   IsInt,
@@ -17,10 +18,12 @@ export class UpdateProjectDto {
 
   @IsOptional()
   @IsDate()
+  @Type(() => Date)
   startDate: Date;
 
   @IsOptional()
   @IsDate()
+  @Type(() => Date)
   endDate: Date;
 
   @IsOptional()

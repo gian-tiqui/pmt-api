@@ -160,8 +160,7 @@ const seedUsers = async () => {
 
 const main = async () => {
   seedEditTypesAndMethod();
-  seedDepartments();
-  seedUsers();
+  seedDepartments().then(seedUsers);
 };
 
 main()
