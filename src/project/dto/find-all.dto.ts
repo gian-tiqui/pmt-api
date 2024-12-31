@@ -8,7 +8,7 @@ import {
 } from 'class-validator';
 import { Transform } from 'class-transformer';
 
-export class FindAllProjectsDto {
+export class FindAllDto {
   @IsOptional()
   @IsString()
   status?: string;
