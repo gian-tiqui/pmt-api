@@ -80,42 +80,6 @@ export class ProjectController {
     return this.projectService.findProjectWork(projectId, workId);
   }
 
-  /*
-   * 3 Levels Nesting - Might remove endpoints later.
-   *
-   * 3 is the maximum level of nesting and which can make the app hard to maintain.
-   */
-
-  @RateLimit({
-    keyPrefix: 'get-project-work-tasks',
-    points: 10,
-    duration: 60,
-    errorMessage: `Please wait before loading a project's work tasks.`,
-  })
-  @Get(':projectId/work/:workId/task')
-  findProjectWorkTasks(
-    @Param('projectId', ParseIntPipe) projectId: number,
-    @Param('workId', ParseIntPipe) workId: number,
-    @Query() query: FindAllDto,
-  ) {
-    return this.projectService.findProjectWorkTasks(projectId, workId, query);
-  }
-
-  @RateLimit({
-    keyPrefix: 'get-project-work-task',
-    points: 10,
-    duration: 60,
-    errorMessage: `Please wait before loading a project's work task.`,
-  })
-  @Get(':projectId/work/:workId/task/:taskId')
-  findProjectWorkTask(
-    @Param('projectId', ParseIntPipe) projectId: number,
-    @Param('workId', ParseIntPipe) workId: number,
-    @Param('taskId', ParseIntPipe) taskId: number,
-  ) {
-    return this.projectService.findProjectWorkTask(projectId, workId, taskId);
-  }
-
   @RateLimit({
     keyPrefix: 'update-project',
     points: 10,
