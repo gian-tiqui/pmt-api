@@ -1,26 +1,27 @@
 import {
-  ConflictException,
+  BadRequestException,
   Injectable,
   InternalServerErrorException,
+  Logger,
   NotFoundException,
-  UnprocessableEntityException,
 } from '@nestjs/common';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { internalServerErrorMessage } from 'src/utils/messages';
-import { FindAllProjectsDto } from './dto/find-all-project.dto';
-import { FindOneWorksDto } from './dto/find-one-works.dto';
+import { FindAllDto } from './dto/find-all.dto';
 import { getPreviousValues } from 'src/utils/functions';
-import { LogMethod } from 'src/utils/enums';
+import { LogMethod, PaginationDefault } from 'src/utils/enums';
 
 const EDIT_TYPE_ID = 3;
 
 @Injectable()
 export class ProjectService {
+  private logger = new Logger('ProjectService');
+
   constructor(private readonly prismaService: PrismaService) {}
 
-  async create(createProjectDto: CreateProjectDto) {
+  async createProject(createProjectDto: CreateProjectDto) {
     try {
       const newProject = await this.prismaService.project.create({
         data: {
@@ -36,13 +37,13 @@ export class ProjectService {
 
       return { message: 'Project created successfully.', project: newProject };
     } catch (error) {
-      console.error(error);
+      this.logger.error(error);
 
       throw new InternalServerErrorException(internalServerErrorMessage);
     }
   }
 
-  async findAll(query: FindAllProjectsDto) {
+  async findProjects(query: FindAllDto) {
     const { status, startDate, endDate, authorId, search, limit, offset } =
       query;
 
@@ -63,25 +64,25 @@ export class ProjectService {
 
       const projects = await this.prismaService.project.findMany({
         where: options,
-        skip: offset,
-        take: limit,
+        skip: offset || PaginationDefault.OFFSET,
+        take: limit || PaginationDefault.LIMIT,
       });
 
       const count = await this.prismaService.project.count({
         where: options,
-        skip: offset,
-        take: limit,
+        skip: offset || PaginationDefault.OFFSET,
+        take: limit || PaginationDefault.LIMIT,
       });
 
       return { message: 'Projects loaded successfully.', projects, count };
     } catch (error) {
-      console.error('Error', error);
+      this.logger.error('Error', error);
 
       throw new InternalServerErrorException(internalServerErrorMessage);
     }
   }
 
-  async findOne(projectId: number) {
+  async findProject(projectId: number) {
     try {
       const project = await this.prismaService.project.findFirst({
         where: { id: projectId },
@@ -95,7 +96,7 @@ export class ProjectService {
 
       return { message: 'Project loaded successfully.', project };
     } catch (error) {
-      console.error(error);
+      this.logger.error(error);
 
       if (error instanceof NotFoundException) throw error;
 
@@ -103,7 +104,7 @@ export class ProjectService {
     }
   }
 
-  async findWorks(projectId: number, query: FindOneWorksDto) {
+  async findProjectWorks(projectId: number, query: FindAllDto) {
     const { offset, limit, search } = query;
     try {
       const options = {
@@ -120,8 +121,8 @@ export class ProjectService {
           projectId: projectId,
           ...options,
         },
-        skip: offset,
-        take: limit,
+        skip: offset || PaginationDefault.OFFSET,
+        take: limit || PaginationDefault.LIMIT,
       });
 
       const count = await this.prismaService.work.count({
@@ -129,8 +130,8 @@ export class ProjectService {
           projectId: projectId,
           ...options,
         },
-        skip: offset,
-        take: limit,
+        skip: offset || PaginationDefault.OFFSET,
+        take: limit || PaginationDefault.LIMIT,
       });
 
       return {
@@ -139,7 +140,7 @@ export class ProjectService {
         message: 'Works of the Project loaded successfully',
       };
     } catch (error) {
-      console.error(error);
+      this.logger.error(error);
 
       if (error instanceof NotFoundException) throw error;
 
@@ -147,30 +148,23 @@ export class ProjectService {
     }
   }
 
-  async findWork(projectId: number, workId: number) {
+  async findProjectWork(projectId: number, workId: number) {
     try {
-      const project = await this.prismaService.project.findFirst({
-        where: { id: projectId },
-      });
-
-      if (!project)
-        throw new NotFoundException(
-          `Project with the id ${projectId} not found.`,
-        );
-
       const work = await this.prismaService.work.findFirst({
-        where: { AND: [{ id: workId }, { projectId: projectId }] },
+        where: { id: workId, projectId },
       });
 
       if (!work)
-        throw new NotFoundException(`Work with the id ${workId} not found.`);
+        throw new NotFoundException(
+          `Work with the id ${workId} not found in project ${projectId}.`,
+        );
 
       return {
         message: 'Work of the project successfully loaded.',
         work,
       };
     } catch (error) {
-      console.error(error);
+      this.logger.error(error);
 
       if (error instanceof NotFoundException) throw error;
 
@@ -178,7 +172,93 @@ export class ProjectService {
     }
   }
 
-  async update(projectId: number, updateProjectDto: UpdateProjectDto) {
+  /*
+   * 3 Levels Nesting - Might remove endpoints later.
+   *
+   * 3 is the maximum level of nesting and which can make the app hard to maintain.
+   */
+
+  async findProjectWorkTasks(
+    projectId: number,
+    workId: number,
+    query: FindAllDto,
+  ) {
+    const { offset, limit, search, status } = query;
+
+    try {
+      const options = {
+        ...(status && { status }),
+        ...(search && {
+          OR: [
+            { name: { contains: search.toLowerCase() } },
+            { description: { contains: search.toLowerCase() } },
+          ],
+        }),
+      };
+
+      const work = await this.prismaService.work.findFirst({
+        where: { id: workId, projectId },
+      });
+
+      if (!work)
+        throw new NotFoundException(
+          `Work with the id ${workId} not found in Project with the id ${projectId}.`,
+        );
+
+      const tasks = await this.prismaService.task.findMany({
+        where: {
+          workId,
+          ...options,
+        },
+        skip: offset || PaginationDefault.OFFSET,
+        take: limit || PaginationDefault.LIMIT,
+      });
+
+      const count = await this.prismaService.task.count({
+        where: {
+          workId,
+          ...options,
+        },
+        skip: offset || PaginationDefault.OFFSET,
+        take: limit || PaginationDefault.LIMIT,
+      });
+
+      return {
+        message: `Tasks of the Project's Work loaded successfully.`,
+        tasks,
+        count,
+      };
+    } catch (error) {
+      this.logger.error(error);
+
+      if (error instanceof NotFoundException) throw error;
+
+      throw new InternalServerErrorException(internalServerErrorMessage);
+    }
+  }
+
+  async findProjectWorkTask(projectId: number, workId: number, taskId: number) {
+    try {
+      const task = await this.prismaService.task.findFirst({
+        where: { id: taskId, workId, work: { projectId: projectId } },
+      });
+
+      if (!task)
+        throw new NotFoundException(
+          `Task with the id ${taskId} not found in Work with the id ${workId}.`,
+        );
+
+      return { message: 'Task loaded successfully.', task };
+    } catch (error) {
+      this.logger.error(error);
+
+      if (error instanceof NotFoundException) throw error;
+
+      throw new InternalServerErrorException(internalServerErrorMessage);
+    }
+  }
+
+  async updateProject(projectId: number, updateProjectDto: UpdateProjectDto) {
     try {
       const project = await this.prismaService.project.findFirst({
         where: { id: projectId },
@@ -206,7 +286,7 @@ export class ProjectService {
       });
 
       if (!updatedProject)
-        throw new ConflictException(
+        throw new BadRequestException(
           'There was a problem in updating the project.',
         );
 
@@ -220,13 +300,13 @@ export class ProjectService {
       });
 
       if (!updatedProjectLog)
-        throw new ConflictException(
+        throw new BadRequestException(
           'There was a problem in creating a log for the project',
         );
 
       return { message: `Project updated successfully` };
     } catch (error) {
-      console.error(error);
+      this.logger.error(error);
 
       if (error instanceof NotFoundException) throw error;
 
@@ -234,7 +314,7 @@ export class ProjectService {
     }
   }
 
-  async remove(projectId: number, userId: number) {
+  async removeProject(projectId: number, userId: number) {
     try {
       const user = await this.prismaService.user.findFirst({
         where: { id: userId },
@@ -257,7 +337,7 @@ export class ProjectService {
       });
 
       if (!deletedProject)
-        throw new ConflictException(
+        throw new BadRequestException(
           'There was a problem in deleting the project.',
         );
 
@@ -271,13 +351,13 @@ export class ProjectService {
       });
 
       if (!deletedLog)
-        throw new UnprocessableEntityException(
+        throw new BadRequestException(
           'There was a problem in creating the log.',
         );
 
       return { message: 'Project deleted successfully.' };
     } catch (error) {
-      console.error(error);
+      this.logger.error(error);
 
       if (error instanceof NotFoundException) throw error;
 

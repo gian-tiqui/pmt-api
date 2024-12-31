@@ -4,4 +4,9 @@ enum LogMethod {
   DELETE = 3,
 }
 
-export { LogMethod };
+enum PaginationDefault {
+  OFFSET = 0,
+  LIMIT = 10,
+}
+
+export { LogMethod, PaginationDefault };
