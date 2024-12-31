@@ -103,7 +103,6 @@ model Project {
   status       String  
   startDate    DateTime?
   endDate      DateTime?
-  title        String
   description  String?
   works        Work[]
   authorId     Int
