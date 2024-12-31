@@ -53,7 +53,7 @@ model Subtask {
   type         String
   status       String    
   description  String?
-  title        String
+  name        String
   assignedToId Int?
   assigedTo    User?     @relation(fields: [assignedToId], references: [id])
   startDate    DateTime?
@@ -70,7 +70,7 @@ model Task {
   type         String
   status       String     
   description  String?
-  title        String
+  name        String
   startDate    DateTime?
   endDate      DateTime?
   subtasks     Subtask[]

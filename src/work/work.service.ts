@@ -1,26 +1,61 @@
-import { Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { CreateWorkDto } from './dto/create-work.dto';
 import { UpdateWorkDto } from './dto/update-work.dto';
+import { PrismaService } from 'src/prisma/prisma.service';
+import { internalServerErrorMessage } from 'src/utils/messages';
 
 @Injectable()
 export class WorkService {
-  create(createWorkDto: CreateWorkDto) {
-    return 'This action adds a new work';
+  private logger = new Logger('WorkService');
+
+  constructor(private readonly prismaService: PrismaService) {}
+
+  async createWork(createWorkDto: CreateWorkDto) {
+    try {
+      const newWork = await this.prismaService.work.create({
+        data: {
+          ...createWorkDto,
+        },
+      });
+
+      return {
+        message: 'Work created successfully',
+        newWork,
+      };
+    } catch (error) {
+      this.logger.error(error);
+
+      if (error instanceof BadRequestException) throw error;
+
+      throw new InternalServerErrorException(internalServerErrorMessage);
+    }
   }
 
-  findAll() {
+  async findWorks() {
     return `This action returns all work`;
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} work`;
+  async findWork(workId: number) {
+    try {
+    } catch (error) {
+      this.logger.error(error);
+
+      if (error instanceof NotFoundException) throw error;
+      throw new InternalServerErrorException(internalServerErrorMessage);
+    }
   }
 
-  update(id: number, updateWorkDto: UpdateWorkDto) {
-    return `This action updates a #${id} work`;
+  async updateWork(workId: number, updateWorkDto: UpdateWorkDto) {
+    return `This action updates a #${workId} work`;
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} work`;
+  async removeWork(workId: number) {
+    return `This action removes a #${workId} work`;
   }
 }

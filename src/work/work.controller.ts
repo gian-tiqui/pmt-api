@@ -6,6 +6,7 @@ import {
   Patch,
   Param,
   Delete,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { WorkService } from './work.service';
 import { CreateWorkDto } from './dto/create-work.dto';
@@ -16,27 +17,30 @@ export class WorkController {
   constructor(private readonly workService: WorkService) {}
 
   @Post()
-  create(@Body() createWorkDto: CreateWorkDto) {
-    return this.workService.create(createWorkDto);
+  createWork(@Body() createWorkDto: CreateWorkDto) {
+    return this.workService.createWork(createWorkDto);
   }
 
   @Get()
-  findAll() {
-    return this.workService.findAll();
+  findWorks() {
+    return this.workService.findWorks();
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.workService.findOne(+id);
+  @Get(':workId')
+  findWork(@Param('workId', ParseIntPipe) workId: number) {
+    return this.workService.findWork(workId);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateWorkDto: UpdateWorkDto) {
-    return this.workService.update(+id, updateWorkDto);
+  @Patch(':workId')
+  updateWork(
+    @Param('workId', ParseIntPipe) workId: number,
+    @Body() updateWorkDto: UpdateWorkDto,
+  ) {
+    return this.workService.updateWork(workId, updateWorkDto);
   }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.workService.remove(+id);
+  @Delete(':workId')
+  removeWork(@Param('workId', ParseIntPipe) workId: number) {
+    return this.workService.removeWork(workId);
   }
 }

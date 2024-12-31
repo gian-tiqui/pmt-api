@@ -18,10 +18,6 @@ export class CreateProjectDto {
 
   @IsNotEmpty()
   @IsString()
-  title: string;
-
-  @IsNotEmpty()
-  @IsString()
   description: string;
 
   @IsNotEmpty()
