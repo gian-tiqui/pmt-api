@@ -18,7 +18,7 @@ export class WorkService {
 
   async createWork(createWorkDto: CreateWorkDto) {
     try {
-      const newWork = await this.prismaService.work.create({
+      await this.prismaService.work.create({
         data: {
           ...createWorkDto,
         },
@@ -26,7 +26,6 @@ export class WorkService {
 
       return {
         message: 'Work created successfully',
-        newWork,
       };
     } catch (error) {
       handleErrors(error, this.logger);
@@ -74,14 +73,14 @@ export class WorkService {
       if (!work)
         throw new BadRequestException(`Work witht he id ${workId} not found.`);
 
-      const updatedWork = await this.prismaService.work.update({
+      await this.prismaService.work.update({
         where: { id: workId },
         data: {
           ...updateWorkDto,
         },
       });
 
-      return { message: 'Work updated', work: updatedWork };
+      return { message: 'Work updated successfully' };
     } catch (error) {
       handleErrors(error, this.logger);
     }
