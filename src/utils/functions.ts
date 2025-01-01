@@ -45,4 +45,5 @@ const handleErrors = (error: any, logger: Logger, customMessage?: string) => {
   const message = customMessage || internalServerErrorMessage;
   throw new InternalServerErrorException(message);
 };
+
 export { getPreviousValues, handleErrors };

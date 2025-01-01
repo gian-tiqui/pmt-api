@@ -21,7 +21,7 @@ export class ProjectService {
 
   async createProject(createProjectDto: CreateProjectDto) {
     try {
-      const newProject = await this.prismaService.project.create({
+      await this.prismaService.project.create({
         data: {
           name: createProjectDto.name,
           authorId: createProjectDto.authorId,
@@ -32,39 +32,74 @@ export class ProjectService {
         },
       });
 
-      return { message: 'Project created successfully.', project: newProject };
+      return { message: 'Project created successfully.' };
     } catch (error) {
       handleErrors(error, this.logger);
     }
   }
 
   async findProjects(query: FindAllDto) {
-    const { status, startDate, endDate, authorId, search, limit, offset } =
-      query;
+    const {
+      status,
+      startDate,
+      endDate,
+      authorId,
+      search,
+      limit,
+      offset,
+      sortBy,
+      sortOrder,
+    } = query;
 
     try {
+      const orderBy = sortBy ? { [sortBy]: sortOrder || 'asc' } : undefined;
       const options = {
         ...(status && { status }),
-        ...(startDate && { startDate }),
-        ...(endDate && { endDate }),
+        ...(startDate &&
+          endDate && {
+            AND: [
+              { startDate: { gte: startDate } },
+              { endDate: { lte: endDate } },
+            ],
+          }),
         ...(authorId && { authorId }),
-        ...(search && {
-          OR: [
-            { name: { contains: search.toLowerCase() } },
-            { title: { contains: search.toLowerCase() } },
-            { description: { contains: search.toLowerCase() } },
-          ],
-        }),
       };
 
       const projects = await this.prismaService.project.findMany({
-        where: options,
+        where: {
+          ...options,
+          ...(search && {
+            OR: [
+              { name: { contains: search.toLowerCase(), mode: 'insensitive' } },
+              {
+                description: {
+                  contains: search.toLowerCase(),
+                  mode: 'insensitive',
+                },
+              },
+            ],
+          }),
+        },
+        orderBy,
         skip: offset || PaginationDefault.OFFSET,
         take: limit || PaginationDefault.LIMIT,
       });
 
       const count = await this.prismaService.project.count({
-        where: options,
+        where: {
+          ...options,
+          ...(search && {
+            OR: [
+              { name: { contains: search.toLowerCase(), mode: 'insensitive' } },
+              {
+                description: {
+                  contains: search.toLowerCase(),
+                  mode: 'insensitive',
+                },
+              },
+            ],
+          }),
+        },
         skip: offset || PaginationDefault.OFFSET,
         take: limit || PaginationDefault.LIMIT,
       });
@@ -94,7 +129,9 @@ export class ProjectService {
   }
 
   async findProjectWorks(projectId: number, query: FindAllDto) {
-    const { offset, limit, search, type } = query;
+    const { offset, limit, search, type, sortBy, sortOrder } = query;
+    const orderBy = sortBy ? { [sortBy]: sortOrder || 'asc' } : undefined;
+
     try {
       const options = {
         ...(search && {
@@ -113,6 +150,7 @@ export class ProjectService {
         },
         skip: offset || PaginationDefault.OFFSET,
         take: limit || PaginationDefault.LIMIT,
+        orderBy,
       });
 
       const count = await this.prismaService.work.count({
@@ -156,6 +194,8 @@ export class ProjectService {
 
   async updateProject(projectId: number, updateProjectDto: UpdateProjectDto) {
     try {
+      const { userId, ...updateData } = updateProjectDto;
+
       const project = await this.prismaService.project.findFirst({
         where: { id: projectId },
       });
@@ -166,19 +206,15 @@ export class ProjectService {
         );
 
       const user = await this.prismaService.user.findFirst({
-        where: { id: +updateProjectDto.userId },
+        where: { id: userId },
       });
 
       if (!user)
         throw new NotFoundException(`User with the id ${projectId} not found.`);
 
-      const userId = updateProjectDto.userId;
-
-      delete updateProjectDto.userId;
-
       const updatedProject = await this.prismaService.project.update({
         where: { id: projectId },
-        data: { ...updateProjectDto },
+        data: { ...updateData },
       });
 
       if (!updatedProject)
