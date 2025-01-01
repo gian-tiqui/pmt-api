@@ -129,7 +129,9 @@ export class ProjectService {
   }
 
   async findProjectWorks(projectId: number, query: FindAllDto) {
-    const { offset, limit, search, type } = query;
+    const { offset, limit, search, type, sortBy, sortOrder } = query;
+    const orderBy = sortBy ? { [sortBy]: sortOrder || 'asc' } : undefined;
+
     try {
       const options = {
         ...(search && {
@@ -148,6 +150,7 @@ export class ProjectService {
         },
         skip: offset || PaginationDefault.OFFSET,
         take: limit || PaginationDefault.LIMIT,
+        orderBy,
       });
 
       const count = await this.prismaService.work.count({
