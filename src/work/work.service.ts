@@ -1,14 +1,14 @@
 import {
   BadRequestException,
   Injectable,
-  InternalServerErrorException,
   Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { CreateWorkDto } from './dto/create-work.dto';
 import { UpdateWorkDto } from './dto/update-work.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { internalServerErrorMessage } from 'src/utils/messages';
+import { handleErrors } from 'src/utils/functions';
+import { FindAllDto } from 'src/project/dto/find-all.dto';
 
 @Injectable()
 export class WorkService {
@@ -29,33 +29,78 @@ export class WorkService {
         newWork,
       };
     } catch (error) {
-      this.logger.error(error);
-
-      if (error instanceof BadRequestException) throw error;
-
-      throw new InternalServerErrorException(internalServerErrorMessage);
+      handleErrors(error, this.logger);
     }
   }
 
-  async findWorks() {
+  async findWorks(query: FindAllDto) {
+    const {
+      search,
+      offset,
+      limit,
+      authorId,
+      type,
+      status,
+      startDate,
+      endDate,
+    } = query;
     return `This action returns all work`;
   }
 
   async findWork(workId: number) {
     try {
-    } catch (error) {
-      this.logger.error(error);
+      const work = await this.prismaService.work.findFirst({
+        where: { id: workId },
+      });
 
-      if (error instanceof NotFoundException) throw error;
-      throw new InternalServerErrorException(internalServerErrorMessage);
+      if (!work)
+        throw new NotFoundException(`Work with the id ${workId} not found.`);
+
+      return {
+        message: 'Work loaded successfully.',
+        work,
+      };
+    } catch (error) {
+      handleErrors(error, this.logger);
     }
   }
 
   async updateWork(workId: number, updateWorkDto: UpdateWorkDto) {
-    return `This action updates a #${workId} work`;
+    try {
+      const work = await this.prismaService.work.findFirst({
+        where: { id: workId },
+      });
+
+      if (!work)
+        throw new BadRequestException(`Work witht he id ${workId} not found.`);
+
+      const updatedWork = await this.prismaService.work.update({
+        where: { id: workId },
+        data: {
+          ...updateWorkDto,
+        },
+      });
+
+      return { message: 'Work updated', work: updatedWork };
+    } catch (error) {
+      handleErrors(error, this.logger);
+    }
   }
 
   async removeWork(workId: number) {
-    return `This action removes a #${workId} work`;
+    try {
+      const work = await this.prismaService.work.findFirst({
+        where: { id: workId },
+      });
+
+      if (!work)
+        throw new NotFoundException(`Work with the id ${workId} not found.`);
+
+      await this.prismaService.work.delete({ where: { id: workId } });
+
+      return { message: 'Work deleted successfully' };
+    } catch (error) {
+      handleErrors(error, this.logger);
+    }
   }
 }

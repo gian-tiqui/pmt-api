@@ -1,16 +1,14 @@
 import {
   BadRequestException,
   Injectable,
-  InternalServerErrorException,
   Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { internalServerErrorMessage } from 'src/utils/messages';
 import { FindAllDto } from './dto/find-all.dto';
-import { getPreviousValues } from 'src/utils/functions';
+import { getPreviousValues, handleErrors } from 'src/utils/functions';
 import { LogMethod, PaginationDefault, Status } from 'src/utils/enums';
 
 const EDIT_TYPE_ID = 3;
@@ -36,9 +34,7 @@ export class ProjectService {
 
       return { message: 'Project created successfully.', project: newProject };
     } catch (error) {
-      this.logger.error(error);
-
-      throw new InternalServerErrorException(internalServerErrorMessage);
+      handleErrors(error, this.logger);
     }
   }
 
@@ -75,9 +71,7 @@ export class ProjectService {
 
       return { message: 'Projects loaded successfully.', projects, count };
     } catch (error) {
-      this.logger.error('Error', error);
-
-      throw new InternalServerErrorException(internalServerErrorMessage);
+      handleErrors(error, this.logger);
     }
   }
 
@@ -95,10 +89,7 @@ export class ProjectService {
 
       return { message: 'Project loaded successfully.', project };
     } catch (error) {
-      this.logger.error(error);
-
-      if (error instanceof NotFoundException) throw error;
-      throw new InternalServerErrorException('An unexpected error occurred.');
+      handleErrors(error, this.logger);
     }
   }
 
@@ -139,10 +130,7 @@ export class ProjectService {
         message: 'Works of the Project loaded successfully',
       };
     } catch (error) {
-      this.logger.error(error);
-
-      if (error instanceof NotFoundException) throw error;
-      throw new InternalServerErrorException(internalServerErrorMessage);
+      handleErrors(error, this.logger);
     }
   }
 
@@ -162,10 +150,7 @@ export class ProjectService {
         work,
       };
     } catch (error) {
-      this.logger.error(error);
-
-      if (error instanceof NotFoundException) throw error;
-      throw new InternalServerErrorException(internalServerErrorMessage);
+      handleErrors(error, this.logger);
     }
   }
 
@@ -217,10 +202,7 @@ export class ProjectService {
 
       return { message: `Project updated successfully` };
     } catch (error) {
-      this.logger.error(error);
-
-      if (error instanceof NotFoundException) throw error;
-      throw new InternalServerErrorException(internalServerErrorMessage);
+      handleErrors(error, this.logger);
     }
   }
 
@@ -267,10 +249,7 @@ export class ProjectService {
 
       return { message: 'Project deleted successfully.' };
     } catch (error) {
-      this.logger.error(error);
-
-      if (error instanceof NotFoundException) throw error;
-      throw new InternalServerErrorException(internalServerErrorMessage);
+      handleErrors(error, this.logger);
     }
   }
 }
