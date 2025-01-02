@@ -120,6 +120,7 @@ export class ProjectService {
     try {
       const project = await this.prismaService.project.findFirst({
         where: { id: projectId },
+        include: { author: { select: { firstName: true, lastName: true } } },
       });
 
       if (!project) {
@@ -191,6 +192,7 @@ export class ProjectService {
     try {
       const work = await this.prismaService.work.findFirst({
         where: { id: workId, projectId },
+        include: { author: { select: { firstName: true, lastName: true } } },
       });
 
       if (!work)

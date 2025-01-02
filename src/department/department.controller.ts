@@ -6,10 +6,13 @@ import {
   Patch,
   Param,
   Delete,
+  Query,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { DepartmentService } from './department.service';
 import { CreateDepartmentDto } from './dto/create-department.dto';
 import { UpdateDepartmentDto } from './dto/update-department.dto';
+import { FindAllDto } from 'src/project/dto/find-all.dto';
 
 @Controller('department')
 export class DepartmentController {
@@ -17,29 +20,32 @@ export class DepartmentController {
 
   @Post()
   create(@Body() createDepartmentDto: CreateDepartmentDto) {
-    return this.departmentService.create(createDepartmentDto);
+    return this.departmentService.createDepartment(createDepartmentDto);
   }
 
   @Get()
-  findAll() {
-    return this.departmentService.findAll();
+  findAll(@Query() query: FindAllDto) {
+    return this.departmentService.findDepartments(query);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.departmentService.findOne(+id);
+  @Get(':deptId')
+  findOne(@Param('deptId', ParseIntPipe) deptId: number) {
+    return this.departmentService.findDepartment(deptId);
   }
 
-  @Patch(':id')
+  @Patch(':deptId')
   update(
-    @Param('id') id: string,
+    @Param('deptId', ParseIntPipe) deptId: number,
     @Body() updateDepartmentDto: UpdateDepartmentDto,
   ) {
-    return this.departmentService.update(+id, updateDepartmentDto);
+    return this.departmentService.updateDepartment(deptId, updateDepartmentDto);
   }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.departmentService.remove(+id);
+  @Delete(':deptId')
+  remove(
+    @Param('deptId', ParseIntPipe) deptId: number,
+    @Query('userId', ParseIntPipe) userId: number,
+  ) {
+    return this.departmentService.removeDepartment(deptId, userId);
   }
 }
