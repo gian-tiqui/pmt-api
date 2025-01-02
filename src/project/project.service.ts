@@ -9,9 +9,7 @@ import { UpdateProjectDto } from './dto/update-project.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { FindAllDto } from './dto/find-all.dto';
 import { getPreviousValues, handleErrors } from 'src/utils/functions';
-import { LogMethod, PaginationDefault, Status } from 'src/utils/enums';
-
-const EDIT_TYPE_ID = 3;
+import { LogMethod, LogType, PaginationDefault } from 'src/utils/enums';
 
 @Injectable()
 export class ProjectService {
@@ -21,6 +19,15 @@ export class ProjectService {
 
   async createProject(createProjectDto: CreateProjectDto) {
     try {
+      const user = await this.prismaService.user.findFirst({
+        where: { id: createProjectDto.authorId },
+      });
+
+      if (!user)
+        throw new NotFoundException(
+          `User with the id ${createProjectDto.authorId} not found.`,
+        );
+
       await this.prismaService.project.create({
         data: {
           name: createProjectDto.name,
@@ -28,7 +35,6 @@ export class ProjectService {
           description: createProjectDto.description,
           startDate: createProjectDto.startDate,
           endDate: createProjectDto.endDate,
-          status: Status.PENDING,
         },
       });
 
@@ -133,20 +139,16 @@ export class ProjectService {
     const orderBy = sortBy ? { [sortBy]: sortOrder || 'asc' } : undefined;
 
     try {
-      const options = {
-        ...(search && {
-          OR: [
-            { name: { contains: search.toLowerCase() } },
-            { description: { contains: search.toLowerCase() } },
-          ],
-        }),
-      };
-
       const works = await this.prismaService.work.findMany({
         where: {
           projectId: projectId,
-          type,
-          ...options,
+          ...(type && { type }),
+          ...(search && {
+            OR: [
+              { name: { contains: search.toLowerCase() } },
+              { description: { contains: search.toLowerCase() } },
+            ],
+          }),
         },
         skip: offset || PaginationDefault.OFFSET,
         take: limit || PaginationDefault.LIMIT,
@@ -156,7 +158,13 @@ export class ProjectService {
       const count = await this.prismaService.work.count({
         where: {
           projectId: projectId,
-          ...options,
+          ...(type && { type }),
+          ...(search && {
+            OR: [
+              { name: { contains: search.toLowerCase() } },
+              { description: { contains: search.toLowerCase() } },
+            ],
+          }),
         },
         skip: offset || PaginationDefault.OFFSET,
         take: limit || PaginationDefault.LIMIT,
@@ -225,7 +233,7 @@ export class ProjectService {
       const updatedProjectLog = await this.prismaService.log.create({
         data: {
           logMethodId: LogMethod.UPDATE,
-          logTypeId: EDIT_TYPE_ID,
+          logTypeId: LogType.PROJECT,
           editedBy: userId,
           logs: getPreviousValues(project, updateProjectDto),
         },
@@ -269,16 +277,16 @@ export class ProjectService {
           'There was a problem in deleting the project.',
         );
 
-      const deletedLog = await this.prismaService.log.create({
+      const deletedProjectLog = await this.prismaService.log.create({
         data: {
           editedBy: userId,
           logs: project,
-          logTypeId: EDIT_TYPE_ID,
+          logTypeId: LogType.PROJECT,
           logMethodId: LogMethod.DELETE,
         },
       });
 
-      if (!deletedLog)
+      if (!deletedProjectLog)
         throw new BadRequestException(
           'There was a problem in creating the log.',
         );

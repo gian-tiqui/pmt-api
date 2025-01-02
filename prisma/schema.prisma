@@ -24,11 +24,11 @@ model User {
   middleName   String?
   lastName     String
   departmentId Int?
+  refreshToken String?
   department   Department?  @relation(fields: [departmentId], references: [id])
   comments     Comment[]
   createdWorks Work[]
   tasks        Task[]
-  subTasks     Subtask[]
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
   authoredProjects Project[]
@@ -48,34 +48,20 @@ model Comment {
   updatedAt    DateTime  @updatedAt
 }
 
-model Subtask {
-  id           Int       @id @default(autoincrement())
-  type         String
-  status       String    
-  description  String?
-  name        String
-  assignedToId Int?
-  assigedTo    User?     @relation(fields: [assignedToId], references: [id])
-  startDate    DateTime?
-  endDate      DateTime?
-  taskId       Int
-  task         Task      @relation(fields: [taskId], references: [id])
-  currentTask  Boolean   @default(false)
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-}
-
 model Task {
   id           Int        @id @default(autoincrement())
   type         String
-  status       String     
+  status       String?    @default("todo")   
   description  String?
-  name        String
+  name         String
   startDate    DateTime?
   endDate      DateTime?
-  subtasks     Subtask[]
+  parentId     Int?
+  parentTask   Task?      @relation("parentTask", fields: [parentId], references: [id])
+  subtasks     Task[]     @relation("parentTask")
   workId       Int
   work         Work       @relation(fields: [workId], references: [id])
+  current      Boolean    @default(false)
   comments     Comment[]
   assignedTo   User?      @relation(fields: [assignedToId], references: [id])
   assignedToId Int?
@@ -88,11 +74,13 @@ model Work {
   name         String
   type         String
   description  String?
-  createdById  Int
-  createdBy    User       @relation(fields: [createdById], references: [id])
+  authorId     Int
+  author       User       @relation(fields: [authorId], references: [id])
   tasks        Task[]
   projectId    Int
   project      Project    @relation(fields: [projectId], references: [id])
+  startDate    DateTime
+  endDate      DateTime
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 }
@@ -100,7 +88,6 @@ model Work {
 model Project {
   id           Int       @id @default(autoincrement())
   name         String
-  status       String  
   startDate    DateTime?
   endDate      DateTime?
   description  String?
@@ -130,7 +117,6 @@ model Log {
   logs         Json
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
-  
 }
 
 model LogType {

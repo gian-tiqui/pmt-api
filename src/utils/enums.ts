@@ -13,4 +13,14 @@ enum Status {
   PENDING = 'pending',
 }
 
-export { LogMethod, PaginationDefault, Status };
+enum LogType {
+  COMMENT = 1,
+  DEPARTMENT = 2,
+  PROJECT = 3,
+  SUBTASK = 4,
+  TASK = 5,
+  USER = 6,
+  WORK = 7,
+}
+
+export { LogMethod, PaginationDefault, Status, LogType };

@@ -1,4 +1,11 @@
-import { IsInt, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { Type } from 'class-transformer';
+import {
+  IsDate,
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 
 export class CreateWorkDto {
   @IsNotEmpty()
@@ -20,4 +27,18 @@ export class CreateWorkDto {
   @IsNotEmpty()
   @IsInt()
   projectId: number;
+
+  @IsNotEmpty()
+  @IsDate()
+  @Type(() => Date)
+  startDate: Date;
+
+  @IsNotEmpty()
+  @IsDate()
+  @Type(() => Date)
+  endDate: Date;
+
+  @IsNotEmpty()
+  @IsInt()
+  authorId: number;
 }
