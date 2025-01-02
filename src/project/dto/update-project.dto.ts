@@ -12,10 +12,6 @@ export class UpdateProjectDto {
   @IsString()
   name: string;
 
-  @IsNotEmpty()
-  @IsString()
-  status: string;
-
   @IsOptional()
   @IsDate()
   @Type(() => Date)
