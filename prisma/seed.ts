@@ -6,6 +6,7 @@ const prismaClient = new PrismaClient();
 const MAX_PROJECTS_COUNT = 59;
 const MAX_WORK_COUNT = 5;
 const MAX_TASK_COUNT = 10;
+const MAX_SUB_TASK_COUNT = 10;
 
 type UserInfo = {
   firstName: string;
@@ -207,7 +208,7 @@ const seedProjectsAndWorks = async () => {
       });
 
       for (let taskIndex = 1; taskIndex <= MAX_TASK_COUNT; taskIndex++) {
-        await prismaClient.task.create({
+        const task = await prismaClient.task.create({
           data: {
             name: `Task ${taskIndex}`,
             description: `Task ${taskIndex} description`,
@@ -220,6 +221,27 @@ const seedProjectsAndWorks = async () => {
             status: 'todo',
           },
         });
+
+        for (
+          let subTaskIndex = 1;
+          subTaskIndex <= MAX_SUB_TASK_COUNT;
+          subTaskIndex++
+        ) {
+          await prismaClient.task.create({
+            data: {
+              name: `Task ${taskIndex}`,
+              description: `Task ${taskIndex} description`,
+              type: 'task',
+              assignedToId: 5,
+              current: false,
+              workId: work.id,
+              startDate: new Date(),
+              endDate: new Date(),
+              status: 'todo',
+              parentId: task.id,
+            },
+          });
+        }
       }
     }
   }

@@ -60,7 +60,7 @@ model Task {
   parentTask   Task?      @relation("parentTask", fields: [parentId], references: [id])
   subtasks     Task[]     @relation("parentTask")
   workId       Int
-  work         Work       @relation(fields: [workId], references: [id])
+  work         Work       @relation(fields: [workId], references: [id], onDelete: Cascade)
   current      Boolean    @default(false)
   comments     Comment[]
   assignedTo   User?      @relation(fields: [assignedToId], references: [id])
@@ -76,7 +76,7 @@ model Work {
   description  String?
   authorId     Int
   author       User       @relation(fields: [authorId], references: [id])
-  tasks        Task[]
+  tasks        Task[]     
   projectId    Int
   project      Project    @relation(fields: [projectId], references: [id])
   startDate    DateTime

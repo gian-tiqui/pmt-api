@@ -185,7 +185,7 @@ export class WorkService {
 
       if (!task)
         throw new NotFoundException(
-          `Task with the ${taskId} not found in  work ${workId}`,
+          `Task with the id ${taskId} not found in work ${workId}`,
         );
 
       return {
@@ -277,7 +277,7 @@ export class WorkService {
         data: {
           editedBy: userId,
           logs: work,
-          logTypeId: LogType.PROJECT,
+          logTypeId: LogType.WORK,
           logMethodId: LogMethod.DELETE,
         },
       });
