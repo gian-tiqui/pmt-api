@@ -27,9 +27,7 @@ export class WorkController {
   })
   @Post()
   createWork(@Body() createWorkDto: CreateWorkDto) {
-    console.log('start date', createWorkDto.startDate);
-    console.log('end date', createWorkDto.endDate);
-    // return this.workService.createWork(createWorkDto);
+    return this.workService.createWork(createWorkDto);
   }
 
   @RateLimit({
