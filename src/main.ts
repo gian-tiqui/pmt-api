@@ -1,11 +1,11 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { ValidationPipe, VersioningType } from '@nestjs/common';
+import { Logger, ValidationPipe, VersioningType } from '@nestjs/common';
 // import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
   const PORT = parseInt(process.env.PORT, 10) || 8080;
-
+  const logger = new Logger('WMC Project Management Tool');
   const app = await NestFactory.create(AppModule);
   // const config = new DocumentBuilder()
   //   .setTitle('WMC Project Management Tool API')
@@ -46,11 +46,9 @@ async function bootstrap() {
   );
 
   await app
-    .listen(PORT, '0.0.0.0', () =>
-      console.log(`Server started at port ${PORT}`),
-    )
+    .listen(PORT, '0.0.0.0', () => logger.log(`Server started at port ${PORT}`))
     .catch((error) => {
-      console.error(error);
+      logger.error(error);
     });
 }
 bootstrap();
