@@ -3,6 +3,10 @@ import * as argon from 'argon2';
 
 const prismaClient = new PrismaClient();
 
+const MAX_PROJECTS_COUNT = 59;
+const MAX_WORK_COUNT = 5;
+const MAX_TASK_COUNT = 10;
+
 type UserInfo = {
   firstName: string;
   middleName?: string;
@@ -88,6 +92,11 @@ const seedUsers = async () => {
       deptId: 9,
     },
     {
+      firstName: 'Jessa',
+      lastName: 'Reforma',
+      deptId: 9,
+    },
+    {
       firstName: 'Jona',
       lastName: 'Yapchionco',
       deptId: 3,
@@ -158,9 +167,68 @@ const seedUsers = async () => {
   console.log('User Seeded.');
 };
 
+const seedProjectsAndWorks = async () => {
+  const projectTitles: string[] = [
+    'IT Project',
+    'HR Project',
+    'QM Project',
+    'NSD Project',
+    'ACC Project',
+  ];
+
+  const workTypes = ['epic', 'story', 'bug', 'task', 'subtask'];
+
+  for (
+    let projectIndex = 10;
+    projectIndex <= MAX_PROJECTS_COUNT;
+    projectIndex++
+  ) {
+    const project = await prismaClient.project.create({
+      data: {
+        name: `${projectTitles[parseInt(String(projectIndex)[0], 10) - 1]} ${projectIndex}`,
+        authorId: 4,
+        startDate: new Date(),
+        endDate: new Date(),
+        description: `Project ${projectIndex} description,`,
+      },
+    });
+
+    for (let workIndex = 1; workIndex <= MAX_WORK_COUNT; workIndex++) {
+      const work = await prismaClient.work.create({
+        data: {
+          name: `${workTypes[workIndex - 1]} ${workIndex}`,
+          description: `${workTypes[workIndex - 1]} ${workIndex} description.`,
+          startDate: new Date(),
+          endDate: new Date(),
+          type: workTypes[workIndex - 1],
+          projectId: project.id,
+          authorId: 4,
+        },
+      });
+
+      for (let taskIndex = 1; taskIndex <= MAX_TASK_COUNT; taskIndex++) {
+        await prismaClient.task.create({
+          data: {
+            name: `Task ${taskIndex}`,
+            description: `Task ${taskIndex} description`,
+            type: 'task',
+            assignedToId: 5,
+            current: false,
+            workId: work.id,
+            startDate: new Date(),
+            endDate: new Date(),
+            status: 'todo',
+          },
+        });
+      }
+    }
+  }
+  console.log('Projects, Works, and Tasks seeded.');
+};
+
 const main = async () => {
   seedEditTypesAndMethod();
-  seedDepartments().then(seedUsers);
+  seedDepartments().then(seedUsers).then(seedProjectsAndWorks);
 };
 
 main()
