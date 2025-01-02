@@ -11,5 +11,9 @@ export class UpdateWorkDto {
 
   @IsString()
   @IsOptional()
+  description?: string;
+
+  @IsString()
+  @IsOptional()
   type?: string;
 }

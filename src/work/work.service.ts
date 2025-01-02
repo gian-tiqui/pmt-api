@@ -62,15 +62,15 @@ export class WorkService {
             { endDate: { lte: endDate } },
           ],
         }),
-      ...(type && { type }),
     };
 
     try {
       const works = await this.prismaService.work.findMany({
         where: {
+          type: { mode: 'insensitive', equals: type },
           ...options,
           ...(search && {
-            AND: [
+            OR: [
               { name: { contains: search, mode: 'insensitive' } },
               { description: { contains: search, mode: 'insensitive' } },
             ],
@@ -83,9 +83,10 @@ export class WorkService {
 
       const count = await this.prismaService.work.count({
         where: {
+          type: { mode: 'insensitive', equals: type },
           ...options,
           ...(search && {
-            AND: [
+            OR: [
               { name: { contains: search, mode: 'insensitive' } },
               { description: { contains: search, mode: 'insensitive' } },
             ],
@@ -123,9 +124,74 @@ export class WorkService {
     }
   }
 
-  async findWorkTasks(query: FindAllDto) {
-    const {} = query;
+  async findWorkTasks(workId: number, query: FindAllDto) {
+    const { offset, limit, search, type, sortBy, sortOrder } = query;
+    const orderBy = sortBy ? { [sortBy]: sortOrder || 'asc' } : undefined;
+
     try {
+      const work = await this.prismaService.work.findFirst({
+        where: { id: workId },
+      });
+
+      if (!work)
+        throw new NotFoundException(`Work with the id ${workId} not found`);
+
+      const tasks = await this.prismaService.task.findMany({
+        where: {
+          workId,
+          ...(type && { type: { mode: 'insensitive', equals: type } }),
+          ...(search && {
+            OR: [
+              { name: { contains: search, mode: 'insensitive' } },
+              { description: { contains: search, mode: 'insensitive' } },
+            ],
+          }),
+        },
+        skip: offset || PaginationDefault.OFFSET,
+        take: limit || PaginationDefault.LIMIT,
+        orderBy,
+      });
+
+      const count = await this.prismaService.task.count({
+        where: {
+          workId,
+          ...(type && { type: { mode: 'insensitive', equals: type } }),
+          ...(search && {
+            OR: [
+              { name: { contains: search, mode: 'insensitive' } },
+              { description: { contains: search, mode: 'insensitive' } },
+            ],
+          }),
+        },
+        skip: offset || PaginationDefault.OFFSET,
+        take: limit || PaginationDefault.LIMIT,
+      });
+
+      return {
+        message: 'Work tasks loaded successfully',
+        tasks,
+        count,
+      };
+    } catch (error) {
+      handleErrors(error, this.logger);
+    }
+  }
+
+  async findWorkTask(workId: number, taskId: number) {
+    try {
+      const task = await this.prismaService.task.findFirst({
+        where: { id: taskId, workId },
+      });
+
+      if (!task)
+        throw new NotFoundException(
+          `Task with the ${taskId} not found in  work ${workId}`,
+        );
+
+      return {
+        message: 'Task of the work loaded successfully.',
+        task,
+      };
     } catch (error) {
       handleErrors(error, this.logger);
     }
@@ -157,14 +223,14 @@ export class WorkService {
         },
       });
 
-      if (updatedWork)
+      if (!updatedWork)
         throw new BadRequestException(
           'There was a problem in updating the data',
         );
 
       const updatedWorkLog = await this.prismaService.log.create({
         data: {
-          logs: getPreviousValues(work, updateWorkDto),
+          logs: getPreviousValues(work, updateData),
           editedBy: editedBy,
           logMethodId: LogMethod.UPDATE,
           logTypeId: LogType.WORK,

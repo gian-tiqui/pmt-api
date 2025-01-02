@@ -58,8 +58,23 @@ export class WorkController {
     duration: 60,
     errorMessage: `Please wait before loading a work's tasks.`,
   })
-  findWorkTasks(@Query() query) {
-    return this.workService.findWorkTasks(query);
+  @Get(':workId/task')
+  findWorkTasks(@Param('workId') workId: number, @Query() query: FindAllDto) {
+    return this.workService.findWorkTasks(workId, query);
+  }
+
+  @RateLimit({
+    keyPrefix: 'get-work-task',
+    points: 10,
+    duration: 60,
+    errorMessage: `Please wait before loading a work's task.`,
+  })
+  @Get(':workId/task/:taskId')
+  findWorkTask(
+    @Param('workId', ParseIntPipe) workId: number,
+    @Param('taskId', ParseIntPipe) taskId: number,
+  ) {
+    return this.workService.findWorkTask(workId, taskId);
   }
 
   @RateLimit({

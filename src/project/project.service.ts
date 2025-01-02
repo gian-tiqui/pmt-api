@@ -139,14 +139,21 @@ export class ProjectService {
     const orderBy = sortBy ? { [sortBy]: sortOrder || 'asc' } : undefined;
 
     try {
+      const project = await this.prismaService.project.findFirst({
+        where: { id: projectId },
+      });
+
+      if (!project)
+        throw new NotFoundException(`Project with the ${projectId} not found.`);
+
       const works = await this.prismaService.work.findMany({
         where: {
-          projectId: projectId,
-          ...(type && { type }),
+          projectId,
+          ...(type && { type: { mode: 'insensitive', equals: type } }),
           ...(search && {
             OR: [
-              { name: { contains: search.toLowerCase() } },
-              { description: { contains: search.toLowerCase() } },
+              { name: { contains: search, mode: 'insensitive' } },
+              { description: { contains: search, mode: 'insensitive' } },
             ],
           }),
         },
@@ -157,12 +164,12 @@ export class ProjectService {
 
       const count = await this.prismaService.work.count({
         where: {
-          projectId: projectId,
-          ...(type && { type }),
+          projectId,
+          ...(type && { type: { mode: 'insensitive', equals: type } }),
           ...(search && {
             OR: [
-              { name: { contains: search.toLowerCase() } },
-              { description: { contains: search.toLowerCase() } },
+              { name: { contains: search, mode: 'insensitive' } },
+              { description: { contains: search, mode: 'insensitive' } },
             ],
           }),
         },
@@ -192,7 +199,7 @@ export class ProjectService {
         );
 
       return {
-        message: 'Work of the project successfully loaded.',
+        message: 'Work of the project loaded successfully.',
         work,
       };
     } catch (error) {
