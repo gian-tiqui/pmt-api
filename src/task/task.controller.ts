@@ -19,18 +19,26 @@ export class TaskController {
   constructor(private readonly taskService: TaskService) {}
 
   @Post()
-  create(@Body() createTaskDto: CreateTaskDto) {
+  createTask(@Body() createTaskDto: CreateTaskDto) {
     return this.taskService.createTask(createTaskDto);
   }
 
   @Get()
-  findAll(@Query() query: FindAllDto) {
+  findTasks(@Query() query: FindAllDto) {
     return this.taskService.findTasks(query);
   }
 
   @Get(':workId')
-  findOne(@Param('workId', ParseIntPipe) workId: number) {
+  findTask(@Param('workId', ParseIntPipe) workId: number) {
     return this.taskService.findTask(workId);
+  }
+
+  @Get(':workId/subtasks')
+  findTaskSubtasks(
+    @Param('workId', ParseIntPipe) workId: number,
+    @Query() query: FindAllDto,
+  ) {
+    return this.taskService.findTaskSubtasks(workId, query);
   }
 
   @Patch(':workId')

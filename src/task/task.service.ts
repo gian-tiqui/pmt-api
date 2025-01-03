@@ -118,6 +118,95 @@ export class TaskService {
     }
   }
 
+  async findTaskSubtasks(taskId: number, query: FindAllDto) {
+    const {
+      limit,
+      offset,
+      search,
+      sortBy,
+      sortOrder,
+      dateWithin,
+      status,
+      type,
+    } = query;
+    const orderBy = sortBy ? { [sortBy]: sortOrder || 'asc' } : undefined;
+
+    const options = {
+      ...(dateWithin && {
+        AND: [
+          { startDate: { gte: dateWithin } },
+          { endDate: { lte: dateWithin } },
+        ],
+      }),
+      ...(type && { type }),
+      ...(status && { status }),
+    };
+
+    try {
+      const tasks = await this.prismaService.task.findMany({
+        where: {
+          ...(search && {
+            OR: [
+              { title: { contains: search, mode: 'insensitive' } },
+              { description: { contains: search, mode: 'insensitive' } },
+            ],
+          }),
+          ...options,
+          parentId: taskId,
+        },
+        orderBy,
+        skip: offset || PaginationDefault.OFFSET,
+        take: limit || PaginationDefault.LIMIT,
+      });
+
+      const count = await this.prismaService.task.count({
+        where: {
+          ...(search && {
+            OR: [
+              { title: { contains: search, mode: 'insensitive' } },
+              { description: { contains: search, mode: 'insensitive' } },
+            ],
+          }),
+          ...options,
+          parentId: taskId,
+        },
+        skip: offset || PaginationDefault.OFFSET,
+        take: limit || PaginationDefault.LIMIT,
+      });
+
+      return {
+        message: 'Tasks loaded successfully.',
+        tasks,
+        count,
+      };
+    } catch (error) {
+      handleErrors(error, this.logger);
+    }
+  }
+
+  async findTaskSubtask(taskId: number, subTaskId: number) {
+    try {
+      const subTask = await this.prismaService.task.findFirst({
+        where: {
+          id: subTaskId,
+          parentId: taskId,
+        },
+      });
+
+      if (!subTask)
+        throw new NotFoundException(
+          `Subtask with the id ${subTaskId} not found in task ${taskId}`,
+        );
+
+      return {
+        message: 'Subtask loaded successfully.',
+        subTask,
+      };
+    } catch (error) {
+      handleErrors(error, this.logger);
+    }
+  }
+
   async updateTask(taskId: number, updateTaskDto: UpdateTaskDto) {
     const { userId, ...updateData } = updateTaskDto;
     try {
