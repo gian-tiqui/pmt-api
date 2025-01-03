@@ -33,6 +33,38 @@ export class UserController {
     return this.userService.findUser(userId);
   }
 
+  @Get(':userId/comment')
+  findUserComments(
+    @Param('userId', ParseIntPipe) userId: number,
+    @Query() query: FindAllDto,
+  ) {
+    return this.userService.findUserComments(userId, query);
+  }
+
+  @Get(':userId/comment/:commentId')
+  findUserComment(
+    @Param('userId', ParseIntPipe) userId: number,
+    @Param('commentId', ParseIntPipe) commentId: number,
+  ) {
+    return this.userService.findUserComment(userId, commentId);
+  }
+
+  @Get(':userId/work')
+  findUserWorks(
+    @Param('userId', ParseIntPipe) userId: number,
+    @Query() query: FindAllDto,
+  ) {
+    this.userService.findUserWorks(userId, query);
+  }
+
+  @Get(':userId/work/:workId')
+  findUserWork(
+    @Param('userId', ParseIntPipe) userId: number,
+    @Param('workId', ParseIntPipe) workId: number,
+  ) {
+    return this.userService.findUserWork(userId, workId);
+  }
+
   @Patch(':userId')
   updateUser(
     @Param('userId', ParseIntPipe) userId: number,

@@ -111,6 +111,168 @@ export class UserService {
     }
   }
 
+  async findUserComments(userId: number, query: FindAllDto) {
+    const { search, offset, limit, sortOrder, sortBy } = query;
+    const orderBy = sortBy ? { [sortBy]: sortOrder || 'asc' } : undefined;
+    try {
+      const user = await this.prismaService.user.findFirst({
+        where: { id: userId },
+      });
+
+      if (!user)
+        throw new NotFoundException(`User with the id ${userId} not found.`);
+
+      const comments = await this.prismaService.comment.findMany({
+        where: {
+          userId,
+          ...(search && {
+            AND: [{ message: { contains: search, mode: 'insensitive' } }],
+          }),
+        },
+
+        orderBy,
+        skip: offset || PaginationDefault.OFFSET,
+        take: limit || PaginationDefault.LIMIT,
+      });
+
+      const count = await this.prismaService.comment.count({
+        where: {
+          userId,
+          ...(search && {
+            AND: [{ message: { contains: search, mode: 'insensitive' } }],
+          }),
+        },
+        skip: offset || PaginationDefault.OFFSET,
+        take: limit || PaginationDefault.LIMIT,
+      });
+
+      return {
+        message: 'Comments of the user loaded successfully',
+        comments,
+        count,
+      };
+    } catch (error) {
+      handleErrors(error, this.logger);
+    }
+  }
+
+  async findUserComment(userId: number, commentId: number) {
+    try {
+      const user = await this.prismaService.user.findFirst({
+        where: { id: userId },
+      });
+
+      if (!user)
+        throw new NotFoundException(`User with the id ${userId} not found.`);
+
+      const comment = await this.prismaService.comment.findFirst({
+        where: { id: commentId, userId },
+      });
+
+      if (!comment)
+        throw new NotFoundException(
+          `Comment with the id ${commentId} not found in user ${userId}`,
+        );
+
+      return {
+        message: 'Comment of the user loaded successfully.',
+        comment,
+      };
+    } catch (error) {
+      handleErrors(error, this.logger);
+    }
+  }
+
+  async findUserWorks(userId: number, query: FindAllDto) {
+    const { dateWithin, offset, limit, search, sortBy, sortOrder, type } =
+      query;
+    const orderBy = sortBy ? { [sortBy]: sortOrder || 'asc' } : undefined;
+    const options = {
+      ...(dateWithin && {
+        AND: [
+          { startDate: { gte: dateWithin } },
+          { endDate: { lte: dateWithin } },
+        ],
+      }),
+      ...(type && { type }),
+    };
+
+    try {
+      const user = await this.prismaService.user.findFirst({
+        where: { id: userId },
+      });
+
+      if (!user)
+        throw new NotFoundException(`User with the id ${userId} not found.`);
+
+      const works = await this.prismaService.work.findMany({
+        where: {
+          authorId: userId,
+          ...options,
+          ...(search && {
+            OR: [
+              { name: { contains: search, mode: 'insensitive' } },
+              { description: { contains: search, mode: 'insensitive' } },
+            ],
+          }),
+        },
+        orderBy,
+        skip: offset || PaginationDefault.OFFSET,
+        take: limit || PaginationDefault.LIMIT,
+      });
+
+      const count = await this.prismaService.work.count({
+        where: {
+          authorId: userId,
+          ...options,
+          ...(search && {
+            OR: [
+              { name: { contains: search, mode: 'insensitive' } },
+              { description: { contains: search, mode: 'insensitive' } },
+            ],
+          }),
+        },
+        skip: offset || PaginationDefault.OFFSET,
+        take: limit || PaginationDefault.LIMIT,
+      });
+
+      return {
+        message: 'Works of the user loaded successfully.',
+        works,
+        count,
+      };
+    } catch (error) {
+      handleErrors(error, this.logger);
+    }
+  }
+
+  async findUserWork(userId: number, workId: number) {
+    try {
+      const user = await this.prismaService.user.findFirst({
+        where: { id: userId },
+      });
+
+      if (!user)
+        throw new NotFoundException(`User with the id ${userId} not found.`);
+
+      const work = await this.prismaService.work.findFirst({
+        where: { id: workId, authorId: userId },
+      });
+
+      if (!work)
+        throw new NotFoundException(
+          `Work with the id ${workId} not found in user ${userId}`,
+        );
+
+      return {
+        message: "User's work loaded successfully",
+        work,
+      };
+    } catch (error) {
+      handleErrors(error, this.logger);
+    }
+  }
+
   async updateUser(userId: number, updateUserDto: UpdateUserDto) {
     const { userId: editedBy, ...updateData } = updateUserDto;
 
