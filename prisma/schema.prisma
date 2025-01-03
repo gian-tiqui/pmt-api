@@ -33,7 +33,7 @@ model User {
   updatedAt    DateTime     @updatedAt
   authoredProjects Project[]
   deadlineExtensions DeadlineExtensions[]
-  logs        Log[]
+  logs         Log[]
 }
 
 model Comment {
@@ -43,7 +43,7 @@ model Comment {
   user         User      @relation(fields: [userId], references: [id])
   taskId       Int?
   task         Task?     @relation(fields: [taskId], references: [id])
-  mentions     String[] 
+  mentions     String[]
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 }

@@ -175,7 +175,7 @@ export class TaskService {
       });
 
       return {
-        message: 'Tasks loaded successfully.',
+        message: 'Subtasks loaded successfully.',
         tasks,
         count,
       };
@@ -201,6 +201,59 @@ export class TaskService {
       return {
         message: 'Subtask loaded successfully.',
         subTask,
+      };
+    } catch (error) {
+      handleErrors(error, this.logger);
+    }
+  }
+
+  async findTaskComments(taskId: number, query: FindAllDto) {
+    const { search, sortBy, sortOrder, offset, limit } = query;
+    const orderBy = sortBy ? { [sortBy]: sortOrder || 'asc' } : undefined;
+
+    try {
+      const task = await this.prismaService.task.findFirst();
+
+      if (!task)
+        throw new NotFoundException(`Task with the id ${taskId} not found.`);
+
+      const comments = await this.prismaService.comment.findMany({
+        where: { message: { contains: search, mode: 'insensitive' } },
+        orderBy,
+        skip: offset,
+        take: limit,
+      });
+
+      const count = await this.prismaService.comment.count({
+        where: { message: { contains: search, mode: 'insensitive' } },
+        skip: offset,
+        take: limit,
+      });
+
+      return {
+        message: 'Task comments successfully loaded.',
+        comments,
+        count,
+      };
+    } catch (error) {
+      handleErrors(error, this.logger);
+    }
+  }
+
+  async findTaskComment(taskId: number, commentId: number) {
+    try {
+      const comment = await this.prismaService.comment.findFirst({
+        where: { id: commentId, taskId },
+      });
+
+      if (!comment)
+        throw new NotFoundException(
+          `Comment with the id ${commentId} in task ${taskId} not found.`,
+        );
+
+      return {
+        message: 'Comment loaded successfully',
+        comment,
       };
     } catch (error) {
       handleErrors(error, this.logger);
