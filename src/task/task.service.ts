@@ -1,26 +1,194 @@
-import { Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
+import { getPreviousValues, handleErrors } from 'src/utils/functions';
+import { PrismaService } from 'src/prisma/prisma.service';
+import { FindAllDto } from 'src/project/dto/find-all.dto';
+import { LogMethod, LogType, PaginationDefault } from 'src/utils/enums';
 
 @Injectable()
 export class TaskService {
-  create(createTaskDto: CreateTaskDto) {
-    return 'This action adds a new task';
+  private logger = new Logger('TaskService');
+
+  constructor(private readonly prismaService: PrismaService) {}
+
+  async createTask(createTaskDto: CreateTaskDto) {
+    try {
+      const newTask = await this.prismaService.task.create({
+        data: {
+          ...createTaskDto,
+        },
+      });
+
+      if (!newTask)
+        throw new BadRequestException(`There was a problem in creating a task`);
+
+      return {
+        message: 'Task created successfully',
+      };
+    } catch (error) {
+      handleErrors(error, this.logger);
+    }
   }
 
-  findAll() {
-    return `This action returns all task`;
+  async findTasks(query: FindAllDto) {
+    const {
+      limit,
+      offset,
+      search,
+      sortBy,
+      sortOrder,
+      dateWithin,
+      status,
+      type,
+    } = query;
+    const orderBy = sortBy ? { [sortBy]: sortOrder || 'asc' } : undefined;
+
+    const options = {
+      ...(dateWithin && {
+        AND: [
+          { startDate: { gte: dateWithin } },
+          { endDate: { lte: dateWithin } },
+        ],
+      }),
+      ...(type && { type }),
+      ...(status && { status }),
+    };
+
+    try {
+      const tasks = await this.prismaService.task.findMany({
+        where: {
+          ...(search && {
+            OR: [
+              { title: { contains: search, mode: 'insensitive' } },
+              { description: { contains: search, mode: 'insensitive' } },
+            ],
+          }),
+          ...options,
+        },
+        orderBy,
+        skip: offset || PaginationDefault.OFFSET,
+        take: limit || PaginationDefault.LIMIT,
+      });
+
+      const count = await this.prismaService.task.count({
+        where: {
+          ...(search && {
+            OR: [
+              { title: { contains: search, mode: 'insensitive' } },
+              { description: { contains: search, mode: 'insensitive' } },
+            ],
+          }),
+          ...options,
+        },
+        skip: offset || PaginationDefault.OFFSET,
+        take: limit || PaginationDefault.LIMIT,
+      });
+
+      return {
+        message: 'Tasks loaded successfully.',
+        tasks,
+        count,
+      };
+    } catch (error) {
+      handleErrors(error, this.logger);
+    }
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} task`;
+  async findTask(taskId: number) {
+    try {
+      const task = await this.prismaService.task.findFirst({
+        where: { id: taskId },
+      });
+
+      if (!task)
+        throw new NotFoundException(`Task with the id ${taskId} not found.`);
+
+      return {
+        message: 'Task loaded successfully.',
+        task,
+      };
+    } catch (error) {
+      handleErrors(error, this.logger);
+    }
   }
 
-  update(id: number, updateTaskDto: UpdateTaskDto) {
-    return `This action updates a #${id} task`;
+  async updateTask(taskId: number, updateTaskDto: UpdateTaskDto) {
+    const { userId, ...updateData } = updateTaskDto;
+    try {
+      const task = await this.prismaService.task.findFirst({
+        where: { id: taskId },
+      });
+
+      if (!task)
+        throw new NotFoundException(`Task with the id ${taskId} not found.`);
+
+      const user = await this.prismaService.user.findFirst({
+        where: { id: userId },
+      });
+
+      if (!user)
+        throw new NotFoundException(`User with the id ${userId} not found.`);
+
+      const updatedTask = await this.prismaService.task.update({
+        where: { id: taskId },
+        data: { ...updateData },
+      });
+
+      if (!updatedTask)
+        throw new BadRequestException(`There was a problem in updating task.`);
+
+      const updatedTaskLog = await this.prismaService.log.create({
+        data: {
+          logs: getPreviousValues(task, updateData),
+          editedBy: userId,
+          logMethodId: LogMethod.UPDATE,
+          logTypeId: LogType.WORK,
+        },
+      });
+
+      if (!updatedTaskLog)
+        throw new BadRequestException(
+          `There was a problem in creating the log.`,
+        );
+
+      return { message: 'Work updated successfully' };
+    } catch (error) {
+      handleErrors(error, this.logger);
+    }
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} task`;
+  async removeTask(taskId: number, userId: number) {
+    try {
+      const task = await this.prismaService.task.findFirst({
+        where: { id: taskId },
+      });
+
+      if (!task)
+        throw new NotFoundException(`Task with the id ${taskId} not found.`);
+
+      const deletedTaskLog = await this.prismaService.log.create({
+        data: {
+          logs: { ...task },
+          editedBy: userId,
+          logMethodId: LogMethod.DELETE,
+          logTypeId: LogType.TASK,
+        },
+      });
+
+      if (!deletedTaskLog)
+        throw new BadRequestException(`There was a problem in creatinga log`);
+
+      await this.prismaService.task.delete({ where: { id: taskId } });
+
+      return { message: 'Task deleted successfully.' };
+    } catch (error) {
+      handleErrors(error, this.logger);
+    }
   }
 }

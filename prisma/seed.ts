@@ -210,7 +210,7 @@ const seedProjectsAndWorks = async () => {
       for (let taskIndex = 1; taskIndex <= MAX_TASK_COUNT; taskIndex++) {
         const task = await prismaClient.task.create({
           data: {
-            name: `Task ${taskIndex}`,
+            title: `Task ${taskIndex}`,
             description: `Task ${taskIndex} description`,
             type: 'task',
             assignedToId: 5,
@@ -229,7 +229,7 @@ const seedProjectsAndWorks = async () => {
         ) {
           await prismaClient.task.create({
             data: {
-              name: `Task ${taskIndex}`,
+              title: `Task ${taskIndex}`,
               description: `Task ${taskIndex} description`,
               type: 'task',
               assignedToId: 5,
