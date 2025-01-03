@@ -47,27 +47,25 @@ export class ProjectService {
   async findProjects(query: FindAllDto) {
     const {
       status,
-      startDate,
-      endDate,
       authorId,
       search,
       limit,
       offset,
       sortBy,
       sortOrder,
+      dateWithin,
     } = query;
 
     try {
       const orderBy = sortBy ? { [sortBy]: sortOrder || 'asc' } : undefined;
       const options = {
         ...(status && { status }),
-        ...(startDate &&
-          endDate && {
-            AND: [
-              { startDate: { gte: startDate } },
-              { endDate: { lte: endDate } },
-            ],
-          }),
+        ...(dateWithin && {
+          AND: [
+            { startDate: { gte: dateWithin } },
+            { endDate: { lte: dateWithin } },
+          ],
+        }),
         ...(authorId && { authorId }),
       };
 
@@ -136,7 +134,8 @@ export class ProjectService {
   }
 
   async findProjectWorks(projectId: number, query: FindAllDto) {
-    const { offset, limit, search, type, sortBy, sortOrder } = query;
+    const { offset, limit, search, type, sortBy, sortOrder, dateWithin } =
+      query;
     const orderBy = sortBy ? { [sortBy]: sortOrder || 'asc' } : undefined;
 
     try {
@@ -157,6 +156,12 @@ export class ProjectService {
               { description: { contains: search, mode: 'insensitive' } },
             ],
           }),
+          ...(dateWithin && {
+            AND: [
+              { startDate: { gte: dateWithin } },
+              { endDate: { lte: dateWithin } },
+            ],
+          }),
         },
         skip: offset || PaginationDefault.OFFSET,
         take: limit || PaginationDefault.LIMIT,
@@ -171,6 +176,12 @@ export class ProjectService {
             OR: [
               { name: { contains: search, mode: 'insensitive' } },
               { description: { contains: search, mode: 'insensitive' } },
+            ],
+          }),
+          ...(dateWithin && {
+            AND: [
+              { startDate: { gte: dateWithin } },
+              { endDate: { lte: dateWithin } },
             ],
           }),
         },

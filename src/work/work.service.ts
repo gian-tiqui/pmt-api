@@ -43,25 +43,16 @@ export class WorkService {
   }
 
   async findWorks(query: FindAllDto) {
-    const {
-      search,
-      offset,
-      limit,
-      type,
-      startDate,
-      endDate,
-      sortOrder,
-      sortBy,
-    } = query;
+    const { search, offset, limit, type, dateWithin, sortOrder, sortBy } =
+      query;
     const orderBy = sortBy ? { [sortBy]: sortOrder || 'asc' } : undefined;
     const options = {
-      ...(startDate &&
-        endDate && {
-          AND: [
-            { startDate: { gte: startDate } },
-            { endDate: { lte: endDate } },
-          ],
-        }),
+      ...(dateWithin && {
+        AND: [
+          { startDate: { gte: dateWithin } },
+          { endDate: { lte: dateWithin } },
+        ],
+      }),
     };
 
     try {
@@ -125,7 +116,8 @@ export class WorkService {
   }
 
   async findWorkTasks(workId: number, query: FindAllDto) {
-    const { offset, limit, search, type, sortBy, sortOrder } = query;
+    const { offset, limit, search, type, sortBy, sortOrder, dateWithin } =
+      query;
     const orderBy = sortBy ? { [sortBy]: sortOrder || 'asc' } : undefined;
 
     try {
@@ -142,8 +134,14 @@ export class WorkService {
           ...(type && { type: { mode: 'insensitive', equals: type } }),
           ...(search && {
             OR: [
-              { name: { contains: search, mode: 'insensitive' } },
+              { title: { contains: search, mode: 'insensitive' } },
               { description: { contains: search, mode: 'insensitive' } },
+            ],
+          }),
+          ...(dateWithin && {
+            AND: [
+              { startDate: { gte: dateWithin } },
+              { endDate: { lte: dateWithin } },
             ],
           }),
         },
@@ -158,8 +156,14 @@ export class WorkService {
           ...(type && { type: { mode: 'insensitive', equals: type } }),
           ...(search && {
             OR: [
-              { name: { contains: search, mode: 'insensitive' } },
+              { title: { contains: search, mode: 'insensitive' } },
               { description: { contains: search, mode: 'insensitive' } },
+            ],
+          }),
+          ...(dateWithin && {
+            AND: [
+              { startDate: { gte: dateWithin } },
+              { endDate: { lte: dateWithin } },
             ],
           }),
         },

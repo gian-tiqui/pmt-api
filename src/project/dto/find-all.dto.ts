@@ -6,7 +6,7 @@ import {
   Min,
   IsNumber,
 } from 'class-validator';
-import { Transform } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 
 export class FindAllDto {
   @IsOptional()
@@ -53,4 +53,9 @@ export class FindAllDto {
   @IsOptional()
   @IsString()
   sortOrder?: string;
+
+  @IsOptional()
+  @IsDateString()
+  @Type(() => Date)
+  dateWithin?: string;
 }

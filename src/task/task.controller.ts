@@ -6,10 +6,13 @@ import {
   Patch,
   Param,
   Delete,
+  Query,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { TaskService } from './task.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
+import { FindAllDto } from 'src/project/dto/find-all.dto';
 
 @Controller('task')
 export class TaskController {
@@ -17,26 +20,32 @@ export class TaskController {
 
   @Post()
   create(@Body() createTaskDto: CreateTaskDto) {
-    return this.taskService.create(createTaskDto);
+    return this.taskService.createTask(createTaskDto);
   }
 
   @Get()
-  findAll() {
-    return this.taskService.findAll();
+  findAll(@Query() query: FindAllDto) {
+    return this.taskService.findTasks(query);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.taskService.findOne(+id);
+  @Get(':workId')
+  findOne(@Param('workId', ParseIntPipe) workId: number) {
+    return this.taskService.findTask(workId);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateTaskDto: UpdateTaskDto) {
-    return this.taskService.update(+id, updateTaskDto);
+  @Patch(':workId')
+  update(
+    @Param('workId', ParseIntPipe) workId: number,
+    @Body() updateTaskDto: UpdateTaskDto,
+  ) {
+    return this.taskService.updateTask(workId, updateTaskDto);
   }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.taskService.remove(+id);
+  @Delete(':workId')
+  remove(
+    @Param('workId', ParseIntPipe) workId: number,
+    @Query('userId', ParseIntPipe) userId: number,
+  ) {
+    return this.taskService.removeTask(workId, userId);
   }
 }
