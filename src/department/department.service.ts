@@ -38,10 +38,12 @@ export class DepartmentService {
 
       const departments = await this.prismaService.department.findMany({
         where: {
-          OR: [
-            { code: { contains: search, mode: 'insensitive' } },
-            { description: { contains: search, mode: 'insensitive' } },
-          ],
+          ...(search && {
+            OR: [
+              { code: { contains: search, mode: 'insensitive' } },
+              { description: { contains: search, mode: 'insensitive' } },
+            ],
+          }),
         },
         orderBy,
         skip: offset || PaginationDefault.OFFSET,
@@ -50,11 +52,14 @@ export class DepartmentService {
 
       const count = await this.prismaService.department.count({
         where: {
-          OR: [
-            { code: { contains: search, mode: 'insensitive' } },
-            { description: { contains: search, mode: 'insensitive' } },
-          ],
+          ...(search && {
+            OR: [
+              { code: { contains: search, mode: 'insensitive' } },
+              { description: { contains: search, mode: 'insensitive' } },
+            ],
+          }),
         },
+        orderBy,
         skip: offset || PaginationDefault.OFFSET,
         take: limit || PaginationDefault.LIMIT,
       });
@@ -120,8 +125,6 @@ export class DepartmentService {
 
       if (!updatedDepartmentLog)
         throw new BadRequestException('There was a problem in creating a log.');
-
-      await this.prismaService.department.delete({ where: { id: deptId } });
 
       return { message: 'Department deleted successfully' };
     } catch (error) {
