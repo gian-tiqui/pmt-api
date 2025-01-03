@@ -53,12 +53,12 @@ export class WorkService {
           { endDate: { lte: dateWithin } },
         ],
       }),
+      ...(type && { type }),
     };
 
     try {
       const works = await this.prismaService.work.findMany({
         where: {
-          type: { mode: 'insensitive', equals: type },
           ...options,
           ...(search && {
             OR: [
@@ -74,7 +74,6 @@ export class WorkService {
 
       const count = await this.prismaService.work.count({
         where: {
-          type: { mode: 'insensitive', equals: type },
           ...options,
           ...(search && {
             OR: [
