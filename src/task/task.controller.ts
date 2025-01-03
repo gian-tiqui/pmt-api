@@ -33,7 +33,7 @@ export class TaskController {
     return this.taskService.findTask(taskId);
   }
 
-  @Get(':taskId/subtasks')
+  @Get(':taskId/subtask')
   findTaskSubtasks(
     @Param('taskId', ParseIntPipe) taskId: number,
     @Query() query: FindAllDto,
@@ -41,12 +41,28 @@ export class TaskController {
     return this.taskService.findTaskSubtasks(taskId, query);
   }
 
-  @Get(':taskId/subtasks/:subTaskId')
+  @Get(':taskId/subtask/:subTaskId')
   findTaskSubtask(
     @Param('taskId', ParseIntPipe) taskId: number,
     @Param('subTaskId', ParseIntPipe) subTaskId: number,
   ) {
     return this.taskService.findTaskSubtask(taskId, subTaskId);
+  }
+
+  @Get(':taskId/comment/')
+  findTaskComments(
+    @Param('taskId', ParseIntPipe) taskId,
+    @Query() query: FindAllDto,
+  ) {
+    return this.taskService.findTaskComments(taskId, query);
+  }
+
+  @Get(':taskId/comment/:commentId')
+  findTaskComment(
+    @Param('taskId', ParseIntPipe) taskId: number,
+    @Param('commentId', ParseIntPipe) commentId: number,
+  ) {
+    return this.taskService.findTaskComment(taskId, commentId);
   }
 
   @Patch(':taskId')
