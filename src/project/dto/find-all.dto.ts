@@ -58,4 +58,12 @@ export class FindAllDto {
   @IsDateString()
   @Type(() => Date)
   dateWithin?: string;
+
+  @IsOptional()
+  @IsInt()
+  departmentId?: number;
+
+  @IsOptional()
+  @IsInt()
+  divisionId?: number;
 }

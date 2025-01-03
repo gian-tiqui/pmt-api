@@ -16,6 +16,15 @@ model Department {
   updatedAt    DateTime    @updatedAt
 }
 
+model Division {
+  id           Int         @id @default(autoincrement())
+  code         String      @unique
+  description  String?     
+  users        User[]
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+}
+
 model User {
   id           Int          @id @default(autoincrement())
   email        String       @unique
@@ -25,7 +34,9 @@ model User {
   lastName     String
   departmentId Int?
   refreshToken String?
+  divisionId   Int?
   department   Department?  @relation(fields: [departmentId], references: [id])
+  divisios     Division?    @relation(fields: [divisionId], references: [id])
   comments     Comment[]
   createdWorks Work[]
   tasks        Task[]
