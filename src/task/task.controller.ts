@@ -28,32 +28,40 @@ export class TaskController {
     return this.taskService.findTasks(query);
   }
 
-  @Get(':workId')
-  findTask(@Param('workId', ParseIntPipe) workId: number) {
-    return this.taskService.findTask(workId);
+  @Get(':taskId')
+  findTask(@Param('taskId', ParseIntPipe) taskId: number) {
+    return this.taskService.findTask(taskId);
   }
 
-  @Get(':workId/subtasks')
+  @Get(':taskId/subtasks')
   findTaskSubtasks(
-    @Param('workId', ParseIntPipe) workId: number,
+    @Param('taskId', ParseIntPipe) taskId: number,
     @Query() query: FindAllDto,
   ) {
-    return this.taskService.findTaskSubtasks(workId, query);
+    return this.taskService.findTaskSubtasks(taskId, query);
   }
 
-  @Patch(':workId')
-  update(
-    @Param('workId', ParseIntPipe) workId: number,
+  @Get(':taskId/subtasks/:subTaskId')
+  findTaskSubtask(
+    @Param('taskId', ParseIntPipe) taskId: number,
+    @Param('subTaskId', ParseIntPipe) subTaskId: number,
+  ) {
+    return this.taskService.findTaskSubtask(taskId, subTaskId);
+  }
+
+  @Patch(':taskId')
+  updateTask(
+    @Param('taskId', ParseIntPipe) taskId: number,
     @Body() updateTaskDto: UpdateTaskDto,
   ) {
-    return this.taskService.updateTask(workId, updateTaskDto);
+    return this.taskService.updateTask(taskId, updateTaskDto);
   }
 
-  @Delete(':workId')
-  remove(
-    @Param('workId', ParseIntPipe) workId: number,
+  @Delete(':taskId')
+  removeTask(
+    @Param('taskId', ParseIntPipe) taskId: number,
     @Query('userId', ParseIntPipe) userId: number,
   ) {
-    return this.taskService.removeTask(workId, userId);
+    return this.taskService.removeTask(taskId, userId);
   }
 }
