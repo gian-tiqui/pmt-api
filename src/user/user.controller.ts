@@ -65,6 +65,38 @@ export class UserController {
     return this.userService.findUserWork(userId, workId);
   }
 
+  @Get(':userId/task')
+  findUserTasks(
+    @Param('userId', ParseIntPipe) userId: number,
+    @Query() query: FindAllDto,
+  ) {
+    return this.userService.findUserTasks(userId, query);
+  }
+
+  @Get(':userId/task/:taskId')
+  findUserTask(
+    @Param('userId', ParseIntPipe) userId: number,
+    @Param('taskId', ParseIntPipe) taskId: number,
+  ) {
+    return this.userService.findUserTask(userId, taskId);
+  }
+
+  @Get(':userId/project')
+  findUserProjects(
+    @Param('userId', ParseIntPipe) userId: number,
+    @Query() query: FindAllDto,
+  ) {
+    return this.userService.findUserProjects(userId, query);
+  }
+
+  @Get(':userId/project/:projectId')
+  findUserProject(
+    @Param('userId', ParseIntPipe) userId: number,
+    @Param('projectId', ParseIntPipe) projectId: number,
+  ) {
+    return this.userService.findUserProject(userId, projectId);
+  }
+
   @Patch(':userId')
   updateUser(
     @Param('userId', ParseIntPipe) userId: number,

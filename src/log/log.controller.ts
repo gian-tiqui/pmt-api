@@ -17,12 +17,12 @@ export class LogController {
 
   @Post()
   create(@Body() createLogDto: CreateLogDto) {
-    return this.logService.create(createLogDto);
+    return this.logService.createLog(createLogDto);
   }
 
   @Get()
   findAll() {
-    return this.logService.findAll();
+    return this.logService.findLogs();
   }
 
   @Get(':id')

@@ -9,6 +9,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { getPreviousValues, handleErrors } from 'src/utils/functions';
 import { FindAllDto } from 'src/project/dto/find-all.dto';
+import * as argon from 'argon2';
 import { LogMethod, LogType, PaginationDefault } from 'src/utils/enums';
 
 @Injectable()
@@ -19,8 +20,10 @@ export class UserService {
 
   async createUser(createUserDto: CreateUserDto) {
     try {
+      const hashedPassword = await argon.hash(createUserDto.password);
+
       const newUser = await this.prismaService.user.create({
-        data: { ...createUserDto },
+        data: { ...createUserDto, password: hashedPassword },
       });
 
       if (!newUser)
@@ -267,6 +270,189 @@ export class UserService {
       return {
         message: "User's work loaded successfully",
         work,
+      };
+    } catch (error) {
+      handleErrors(error, this.logger);
+    }
+  }
+
+  async findUserTasks(userId: number, query: FindAllDto) {
+    const {
+      limit,
+      offset,
+      search,
+      sortBy,
+      sortOrder,
+      dateWithin,
+      status,
+      type,
+    } = query;
+    const orderBy = sortBy ? { [sortBy]: sortOrder || 'asc' } : undefined;
+
+    const options = {
+      ...(dateWithin && {
+        AND: [
+          { startDate: { gte: dateWithin } },
+          { endDate: { lte: dateWithin } },
+        ],
+      }),
+      ...(type && { type }),
+      ...(status && { status }),
+    };
+
+    try {
+      const tasks = await this.prismaService.task.findMany({
+        where: {
+          assignedToId: userId,
+          ...(search && {
+            OR: [
+              { title: { contains: search, mode: 'insensitive' } },
+              { description: { contains: search, mode: 'insensitive' } },
+            ],
+          }),
+          ...options,
+        },
+        orderBy,
+        skip: offset || PaginationDefault.OFFSET,
+        take: limit || PaginationDefault.LIMIT,
+      });
+
+      const count = await this.prismaService.task.count({
+        where: {
+          assignedToId: userId,
+          ...(search && {
+            OR: [
+              { title: { contains: search, mode: 'insensitive' } },
+              { description: { contains: search, mode: 'insensitive' } },
+            ],
+          }),
+          ...options,
+        },
+        skip: offset || PaginationDefault.OFFSET,
+        take: limit || PaginationDefault.LIMIT,
+      });
+
+      return {
+        message: 'Tasks loaded successfully.',
+        tasks,
+        count,
+      };
+    } catch (error) {
+      handleErrors(error, this.logger);
+    }
+  }
+
+  async findUserTask(userId: number, taskId: number) {
+    try {
+      const task = await this.prismaService.task.findFirst({
+        where: {
+          id: taskId,
+          assignedToId: userId,
+        },
+      });
+
+      if (!task)
+        throw new NotFoundException(
+          `Task with the id ${taskId} not found in user ${userId}.`,
+        );
+
+      return {
+        message: 'Task of the user loaded successfully.',
+        task,
+      };
+    } catch (error) {
+      handleErrors(error, this.logger);
+    }
+  }
+
+  async findUserProjects(userId: number, query: FindAllDto) {
+    const {
+      status,
+      authorId,
+      search,
+      limit,
+      offset,
+      sortBy,
+      sortOrder,
+      dateWithin,
+    } = query;
+
+    try {
+      const orderBy = sortBy ? { [sortBy]: sortOrder || 'asc' } : undefined;
+      const options = {
+        ...(status && { status }),
+        ...(dateWithin && {
+          AND: [
+            { startDate: { gte: dateWithin } },
+            { endDate: { lte: dateWithin } },
+          ],
+        }),
+        ...(authorId && { authorId }),
+        authorId: userId,
+      };
+
+      const projects = await this.prismaService.project.findMany({
+        where: {
+          ...options,
+          ...(search && {
+            OR: [
+              { name: { contains: search.toLowerCase(), mode: 'insensitive' } },
+              {
+                description: {
+                  contains: search.toLowerCase(),
+                  mode: 'insensitive',
+                },
+              },
+            ],
+          }),
+        },
+        orderBy,
+        skip: offset || PaginationDefault.OFFSET,
+        take: limit || PaginationDefault.LIMIT,
+      });
+
+      const count = await this.prismaService.project.count({
+        where: {
+          ...options,
+          ...(search && {
+            OR: [
+              { name: { contains: search.toLowerCase(), mode: 'insensitive' } },
+              {
+                description: {
+                  contains: search.toLowerCase(),
+                  mode: 'insensitive',
+                },
+              },
+            ],
+          }),
+        },
+        skip: offset || PaginationDefault.OFFSET,
+        take: limit || PaginationDefault.LIMIT,
+      });
+
+      return { message: 'Projects loaded successfully.', projects, count };
+    } catch (error) {
+      handleErrors(error, this.logger);
+    }
+  }
+
+  async findUserProject(userId: number, projectId: number) {
+    try {
+      const project = await this.prismaService.project.findFirst({
+        where: {
+          id: projectId,
+          authorId: userId,
+        },
+      });
+
+      if (!project)
+        throw new NotFoundException(
+          `Project with the id ${projectId} not found in user ${userId}`,
+        );
+
+      return {
+        message: 'Project of the user loaded successfully.',
+        project,
       };
     } catch (error) {
       handleErrors(error, this.logger);
