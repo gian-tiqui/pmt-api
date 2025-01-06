@@ -17,10 +17,18 @@ export class CommentService {
   constructor(private readonly prismaService: PrismaService) {}
 
   async createComment(createCommentDto: CreateCommentDto) {
+    const { mentions, ...createData } = createCommentDto;
+
     try {
+      const convertedMentions = mentions
+        .split(',')
+        .map((id) => ({ userId: +id }));
       const newComment = await this.prismaService.comment.create({
         data: {
-          ...createCommentDto,
+          ...createData,
+          mentions: {
+            create: convertedMentions,
+          },
         },
       });
 

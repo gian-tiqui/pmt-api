@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsOptional } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class CreateCommentDto {
   @IsNotEmpty()
@@ -8,5 +8,6 @@ export class CreateCommentDto {
   userId: number;
 
   @IsOptional()
-  mentions: string[];
+  @IsString()
+  mentions?: string;
 }
