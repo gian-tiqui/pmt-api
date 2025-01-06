@@ -13,6 +13,8 @@ type UserInfo = {
   middleName?: string;
   lastName: string;
   deptId: number;
+  divisionId: number;
+  employeeId: number;
 };
 
 const seedEditTypesAndMethod = async () => {
@@ -99,71 +101,99 @@ const seedUsers = async () => {
       firstName: 'Jose Mari',
       lastName: 'Prats',
       deptId: 9,
+      divisionId: 1,
+      employeeId: 1010,
     },
     {
       firstName: 'Abet',
       lastName: 'Yaunario',
       deptId: 9,
+      divisionId: 1,
+      employeeId: 1011,
     },
     {
       firstName: 'Catherine',
       lastName: 'Carparas',
       deptId: 9,
+      divisionId: 1,
+      employeeId: 1012,
     },
     {
       firstName: 'Jessa',
       lastName: 'Reforma',
       deptId: 9,
+      divisionId: 1,
+      employeeId: 1013,
     },
     {
       firstName: 'Jona',
       lastName: 'Yapchionco',
       deptId: 3,
+      divisionId: 1,
+      employeeId: 1014,
     },
     {
       firstName: 'Marie Ana',
       lastName: 'Alvarez',
       deptId: 1,
+      divisionId: 1,
+      employeeId: 1015,
     },
     {
       firstName: 'Andy',
       lastName: 'Pagasa',
       deptId: 8,
+      divisionId: 1,
+      employeeId: 1016,
     },
     {
       firstName: 'Jason',
       lastName: 'Abarca',
       deptId: 5,
+      divisionId: 1,
+      employeeId: 1017,
     },
     {
       firstName: 'Sam',
       lastName: 'Timtiman',
       deptId: 4,
+      divisionId: 1,
+      employeeId: 1018,
     },
     {
       firstName: 'Ivy',
       lastName: 'Tanamal-Perez',
       deptId: 9,
+      divisionId: 1,
+      employeeId: 1019,
     },
     {
       firstName: 'Cathy',
       lastName: 'Espinosa',
       deptId: 2,
+      divisionId: 1,
+      employeeId: 1020,
     },
     {
       firstName: 'Jorrel',
       lastName: 'Torres',
       deptId: 8,
+      divisionId: 1,
+      employeeId: 1021,
     },
     {
       firstName: 'Armalyn',
       lastName: 'Mariano',
       deptId: 6,
+      divisionId: 1,
+      employeeId: 1022,
     },
     {
       firstName: 'Herbert',
       lastName: 'Aquino',
       deptId: 7,
+      divisionId: 1,
+      employeeId: 1023,
     },
   ];
 
@@ -178,7 +208,9 @@ const seedUsers = async () => {
         firstName: user.firstName.toLowerCase(),
         lastName: user.lastName.toLowerCase(),
         departmentId: user.deptId,
+        divisionId: user.divisionId,
         password: hashedPassword,
+        employeeId: user.employeeId,
       },
     });
   }
@@ -268,6 +300,7 @@ const seedProjectsAndWorks = async () => {
 
 const main = async () => {
   seedEditTypesAndMethod();
+  seedDivision();
   seedDepartments().then(seedUsers).then(seedProjectsAndWorks);
 };
 
