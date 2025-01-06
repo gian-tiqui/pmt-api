@@ -484,10 +484,13 @@ export class UserService {
           `There was a problem in creating a user log.`,
         );
 
-      await this.prismaService.user.delete({ where: { id: userId } });
+      await this.prismaService.user.update({
+        where: { id: userId },
+        data: { ...updateData },
+      });
 
       return {
-        message: 'User deleted successfully',
+        message: 'User updated successfully',
       };
     } catch (error) {
       handleErrors(error, this.logger);

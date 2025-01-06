@@ -126,7 +126,7 @@ export class AuthService {
         include: { department: true },
       });
 
-      if (!user) throw new NotFoundException(`User not found`);
+      if (!user) throw new NotFoundException(`Refresh token not found`);
 
       const accessToken = await this.signToken(
         user.id,

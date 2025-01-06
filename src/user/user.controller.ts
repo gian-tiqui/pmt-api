@@ -54,7 +54,7 @@ export class UserController {
     @Param('userId', ParseIntPipe) userId: number,
     @Query() query: FindAllDto,
   ) {
-    this.userService.findUserWorks(userId, query);
+    return this.userService.findUserWorks(userId, query);
   }
 
   @Get(':userId/work/:workId')
