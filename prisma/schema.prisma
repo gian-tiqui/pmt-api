@@ -45,6 +45,7 @@ model User {
   departmentId Int?
   refreshToken String?
   divisionId   Int?
+  employeeId   Int          @unique
   department   Department?  @relation(fields: [departmentId], references: [id])
   division     Division?    @relation(fields: [divisionId], references: [id])
   comments     Comment[]
