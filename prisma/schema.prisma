@@ -12,6 +12,7 @@ model Department {
   code         String      @unique
   description  String?
   users        User[]    
+  deptDivision DepartmentDivision[]
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
 }
@@ -21,8 +22,17 @@ model Division {
   code         String      @unique
   description  String?     
   users        User[]
+  deptDivision DepartmentDivision[]
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
+}
+
+model DepartmentDivision {
+  id           Int         @id @default(autoincrement())
+  departmentId Int  
+  department   Department  @relation(fields: [departmentId], references: [id])
+  divisionId   Int   
+  division     Division    @relation(fields: [divisionId], references: [id])
 }
 
 model User {
@@ -36,7 +46,7 @@ model User {
   refreshToken String?
   divisionId   Int?
   department   Department?  @relation(fields: [departmentId], references: [id])
-  divisios     Division?    @relation(fields: [divisionId], references: [id])
+  division     Division?    @relation(fields: [divisionId], references: [id])
   comments     Comment[]
   createdWorks Work[]
   tasks        Task[]

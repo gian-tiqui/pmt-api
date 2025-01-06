@@ -75,6 +75,24 @@ const seedDepartments = async () => {
   console.log('Department seeded.');
 };
 
+const seedDivision = async () => {
+  const divisions = [
+    { description: 'Admin', code: 'adm' },
+    { description: 'Nursing Services', code: 'nsd' },
+    { description: 'Ancillary', code: 'anc' },
+  ];
+
+  for (const division of divisions) {
+    await prismaClient.division.upsert({
+      where: { code: division.code },
+      update: {},
+      create: division,
+    });
+  }
+
+  console.log('Division seeded.');
+};
+
 const seedUsers = async () => {
   const users: UserInfo[] = [
     {
