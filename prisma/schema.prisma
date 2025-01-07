@@ -64,8 +64,8 @@ model Comment {
   message      String
   userId       Int
   user         User      @relation(fields: [userId], references: [id])
-  taskId       Int?
-  task         Task?     @relation(fields: [taskId], references: [id])
+  taskId       Int
+  task         Task      @relation(fields: [taskId], references: [id])
   mentions     Mention[] @relation("Mentions")
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
