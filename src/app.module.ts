@@ -11,9 +11,14 @@ import { APP_GUARD } from '@nestjs/core';
 import { LogModule } from './log/log.module';
 import { AuthModule } from './auth/auth.module';
 import { MentionModule } from './mention/mention.module';
+import { CacheModule } from '@nestjs/cache-manager';
 
 @Module({
   imports: [
+    CacheModule.register({
+      ttl: 5,
+      max: 100,
+    }),
     RateLimiterModule,
     ProjectModule,
     WorkModule,

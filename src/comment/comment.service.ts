@@ -10,12 +10,19 @@ import { FindAllDto } from 'src/project/dto/find-all.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { handleErrors } from 'src/utils/functions';
 import { LogMethod, LogType, PaginationDefault } from 'src/utils/enums';
+import { Inject } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
+import { Comment } from '@prisma/client';
 
 @Injectable()
 export class CommentService {
   private logger = new Logger('CommentService');
 
-  constructor(private readonly prismaService: PrismaService) {}
+  constructor(
+    private readonly prismaService: PrismaService,
+    @Inject(CACHE_MANAGER) private cache: Cache,
+  ) {}
 
   async createComment(createCommentDto: CreateCommentDto) {
     const { mentions, ...createData } = createCommentDto;
@@ -50,28 +57,42 @@ export class CommentService {
   async findComments(query: FindAllDto) {
     const { search, offset, limit, sortOrder, sortBy } = query;
     const orderBy = sortBy ? { [sortBy]: sortOrder || 'asc' } : undefined;
+    const queryString: string = JSON.stringify(query);
     try {
-      const comments = await this.prismaService.comment.findMany({
-        where: {
-          ...(search && {
-            AND: [{ message: { contains: search, mode: 'insensitive' } }],
-          }),
-        },
+      let comments;
+      let count;
 
-        orderBy,
-        skip: offset || PaginationDefault.OFFSET,
-        take: limit || PaginationDefault.LIMIT,
-      });
+      const cachedComments: { comments: Comment[]; count: number } =
+        await this.cache.get(queryString);
 
-      const count = await this.prismaService.comment.count({
-        where: {
-          ...(search && {
-            AND: [{ message: { contains: search, mode: 'insensitive' } }],
-          }),
-        },
-        skip: offset || PaginationDefault.OFFSET,
-        take: limit || PaginationDefault.LIMIT,
-      });
+      if (cachedComments) {
+        comments = cachedComments.comments;
+        count = cachedComments.count;
+      } else {
+        comments = await this.prismaService.comment.findMany({
+          where: {
+            ...(search && {
+              AND: [{ message: { contains: search, mode: 'insensitive' } }],
+            }),
+          },
+
+          orderBy,
+          skip: offset || PaginationDefault.OFFSET,
+          take: limit || PaginationDefault.LIMIT,
+        });
+
+        count = await this.prismaService.comment.count({
+          where: {
+            ...(search && {
+              AND: [{ message: { contains: search, mode: 'insensitive' } }],
+            }),
+          },
+          skip: offset || PaginationDefault.OFFSET,
+          take: limit || PaginationDefault.LIMIT,
+        });
+      }
+
+      await this.cache.set(queryString, { comments, count }, 300);
 
       return {
         message: 'Comments of the user loaded successfully',
