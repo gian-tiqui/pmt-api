@@ -10,6 +10,7 @@ import { RateLimiterGuard, RateLimiterModule } from 'nestjs-rate-limiter';
 import { APP_GUARD } from '@nestjs/core';
 import { LogModule } from './log/log.module';
 import { AuthModule } from './auth/auth.module';
+import { MentionModule } from './mention/mention.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { AuthModule } from './auth/auth.module';
     ConfigModule.forRoot({ isGlobal: true }),
     LogModule,
     AuthModule,
+    MentionModule,
   ],
   controllers: [],
   providers: [

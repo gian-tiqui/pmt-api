@@ -7,6 +7,7 @@ const MAX_PROJECTS_COUNT = 59;
 const MAX_WORK_COUNT = 5;
 const MAX_TASK_COUNT = 10;
 const MAX_SUB_TASK_COUNT = 10;
+const MAX_COMMENT_COUNT = 10;
 
 type UserInfo = {
   firstName: string;
@@ -273,6 +274,28 @@ const seedProjectsAndWorks = async () => {
         });
 
         for (
+          let commentIndex = 1;
+          commentIndex <= MAX_COMMENT_COUNT;
+          commentIndex++
+        ) {
+          await prismaClient.comment.create({
+            data: {
+              message: `Comment #${commentIndex} for task ${taskIndex} in work ${workIndex}`,
+              mentions: {
+                create: [
+                  { userId: 1 },
+                  { userId: 2 },
+                  { userId: 3 },
+                  { userId: 5 },
+                ],
+              },
+              userId: 4,
+              taskId: taskIndex,
+            },
+          });
+        }
+
+        for (
           let subTaskIndex = 1;
           subTaskIndex <= MAX_SUB_TASK_COUNT;
           subTaskIndex++
@@ -295,7 +318,7 @@ const seedProjectsAndWorks = async () => {
       }
     }
   }
-  console.log('Projects, Works, and Tasks seeded.');
+  console.log('Projects, Works, Tasks, and Comments seeded.');
 };
 
 const main = async () => {

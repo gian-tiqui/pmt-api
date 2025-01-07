@@ -36,26 +36,27 @@ model DepartmentDivision {
 }
 
 model User {
-  id           Int          @id @default(autoincrement())
-  email        String       @unique
-  password     String
-  firstName    String
-  middleName   String?
-  lastName     String
-  departmentId Int?
-  refreshToken String?
-  divisionId   Int?
-  employeeId   Int          @unique
-  department   Department?  @relation(fields: [departmentId], references: [id])
-  division     Division?    @relation(fields: [divisionId], references: [id])
-  comments     Comment[]
-  createdWorks Work[]
-  tasks        Task[]
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
-  authoredProjects Project[]
+  id                Int            @id @default(autoincrement())
+  email             String         @unique
+  password          String
+  firstName         String
+  middleName        String?
+  lastName          String
+  departmentId      Int?
+  refreshToken      String?
+  divisionId        Int?
+  employeeId        Int            @unique
+  department        Department?    @relation(fields: [departmentId], references: [id])
+  division          Division?      @relation(fields: [divisionId], references: [id])
+  comments          Comment[]
+  createdWorks      Work[]
+  tasks             Task[]
+  authoredProjects  Project[]
   deadlineExtensions DeadlineExtensions[]
-  logs         Log[]
+  logs              Log[]
+  mentions          Mention[]      @relation("MentionedIn")
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
 }
 
 model Comment {
@@ -63,11 +64,19 @@ model Comment {
   message      String
   userId       Int
   user         User      @relation(fields: [userId], references: [id])
-  taskId       Int?
-  task         Task?     @relation(fields: [taskId], references: [id])
-  mentions     String[]
+  taskId       Int
+  task         Task      @relation(fields: [taskId], references: [id])
+  mentions     Mention[] @relation("Mentions")
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+}
+
+model Mention {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation("MentionedIn", fields: [userId], references: [id])
+  commentId Int
+  comment   Comment  @relation("Mentions", fields: [commentId], references: [id])
 }
 
 model Task {
