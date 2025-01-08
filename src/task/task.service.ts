@@ -6,7 +6,12 @@ import {
 } from '@nestjs/common';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
-import { getPreviousValues, handleErrors } from 'src/utils/functions';
+import {
+  firstDateGreaterThanSecondDate,
+  getPreviousValues,
+  handleErrors,
+  validateParentAndChildDates,
+} from 'src/utils/functions';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { FindAllDto } from 'src/project/dto/find-all.dto';
 import { LogMethod, LogType, PaginationDefault } from 'src/utils/enums';
@@ -19,14 +24,52 @@ export class TaskService {
 
   async createTask(createTaskDto: CreateTaskDto) {
     try {
-      const newTask = await this.prismaService.task.create({
+      firstDateGreaterThanSecondDate(
+        createTaskDto.startDate,
+        createTaskDto.endDate,
+        'Work',
+      );
+
+      const user = await this.prismaService.user.findFirst({
+        where: { id: createTaskDto.assignedToId },
+      });
+
+      if (!user)
+        throw new NotFoundException(
+          `User with the id ${createTaskDto.assignedToId} not found.`,
+        );
+
+      if (createTaskDto.parentId) {
+        const parentTask = await this.prismaService.task.findFirst({
+          where: { id: createTaskDto.parentId },
+        });
+
+        if (!parentTask) throw new NotFoundException(`Parent task not found`);
+
+        validateParentAndChildDates(
+          createTaskDto,
+          parentTask,
+          'subtask',
+          'task',
+        );
+      }
+
+      const work = await this.prismaService.work.findFirst({
+        where: { id: createTaskDto.workId },
+      });
+
+      if (!work)
+        throw new NotFoundException(
+          `Work with the id ${createTaskDto.workId} not found.`,
+        );
+
+      validateParentAndChildDates(createTaskDto, work, 'task', 'work');
+
+      await this.prismaService.task.create({
         data: {
           ...createTaskDto,
         },
       });
-
-      if (!newTask)
-        throw new BadRequestException(`There was a problem in creating a task`);
 
       return {
         message: 'Task created successfully',
@@ -86,14 +129,12 @@ export class TaskService {
           }),
           ...options,
         },
-        skip: offset || PaginationDefault.OFFSET,
-        take: limit || PaginationDefault.LIMIT,
       });
 
       return {
         message: 'Tasks loaded successfully.',
-        tasks,
         count,
+        tasks,
       };
     } catch (error) {
       handleErrors(error, this.logger);
@@ -143,6 +184,13 @@ export class TaskService {
     };
 
     try {
+      const task = await this.prismaService.task.findFirst({
+        where: { id: taskId },
+      });
+
+      if (!task)
+        throw new NotFoundException(`Task with the id ${taskId} not found.`);
+
       const tasks = await this.prismaService.task.findMany({
         where: {
           ...(search && {
@@ -170,14 +218,12 @@ export class TaskService {
           ...options,
           parentId: taskId,
         },
-        skip: offset || PaginationDefault.OFFSET,
-        take: limit || PaginationDefault.LIMIT,
       });
 
       return {
         message: 'Subtasks loaded successfully.',
-        tasks,
         count,
+        tasks,
       };
     } catch (error) {
       handleErrors(error, this.logger);
@@ -226,14 +272,12 @@ export class TaskService {
 
       const count = await this.prismaService.comment.count({
         where: { message: { contains: search, mode: 'insensitive' } },
-        skip: offset,
-        take: limit,
       });
 
       return {
         message: 'Task comments successfully loaded.',
-        comments,
         count,
+        comments,
       };
     } catch (error) {
       handleErrors(error, this.logger);
@@ -263,6 +307,12 @@ export class TaskService {
   async updateTask(taskId: number, updateTaskDto: UpdateTaskDto) {
     const { userId, ...updateData } = updateTaskDto;
     try {
+      firstDateGreaterThanSecondDate(
+        updateTaskDto.startDate,
+        updateTaskDto.endDate,
+        'Task',
+      );
+
       const task = await this.prismaService.task.findFirst({
         where: { id: taskId },
       });
@@ -276,6 +326,32 @@ export class TaskService {
 
       if (!user)
         throw new NotFoundException(`User with the id ${userId} not found.`);
+
+      if (updateTaskDto.parentId) {
+        const parentTask = await this.prismaService.task.findFirst({
+          where: { id: updateTaskDto.parentId },
+        });
+
+        if (!parentTask) throw new NotFoundException(`Parent task not found`);
+
+        validateParentAndChildDates(
+          updateTaskDto,
+          parentTask,
+          'subtask',
+          'task',
+        );
+      }
+
+      const work = await this.prismaService.work.findFirst({
+        where: { id: updateTaskDto.workId },
+      });
+
+      if (!work)
+        throw new NotFoundException(
+          `Work with the id ${updateTaskDto.workId} not found.`,
+        );
+
+      validateParentAndChildDates(updateTaskDto, work, 'task', 'work');
 
       const updatedTask = await this.prismaService.task.update({
         where: { id: taskId },

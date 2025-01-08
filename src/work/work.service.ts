@@ -7,7 +7,12 @@ import {
 import { CreateWorkDto } from './dto/create-work.dto';
 import { UpdateWorkDto } from './dto/update-work.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { getPreviousValues, handleErrors } from 'src/utils/functions';
+import {
+  firstDateGreaterThanSecondDate,
+  getPreviousValues,
+  handleErrors,
+  validateParentAndChildDates,
+} from 'src/utils/functions';
 import { FindAllDto } from 'src/project/dto/find-all.dto';
 import { LogMethod, LogType, PaginationDefault } from 'src/utils/enums';
 
@@ -19,6 +24,12 @@ export class WorkService {
 
   async createWork(createWorkDto: CreateWorkDto) {
     try {
+      firstDateGreaterThanSecondDate(
+        createWorkDto.startDate,
+        createWorkDto.endDate,
+        'Work',
+      );
+
       const user = await this.prismaService.user.findFirst({
         where: { id: createWorkDto.authorId },
       });
@@ -27,6 +38,17 @@ export class WorkService {
         throw new NotFoundException(
           `User with the id ${createWorkDto.authorId} not found`,
         );
+
+      const project = await this.prismaService.project.findFirst({
+        where: { id: createWorkDto.projectId },
+      });
+
+      if (!project)
+        throw new NotFoundException(
+          `Project with the id ${createWorkDto.projectId} not found.`,
+        );
+
+      validateParentAndChildDates(createWorkDto, project, 'work', 'project');
 
       await this.prismaService.work.create({
         data: {
@@ -82,14 +104,12 @@ export class WorkService {
             ],
           }),
         },
-        skip: offset || PaginationDefault.OFFSET,
-        take: limit || PaginationDefault.LIMIT,
       });
 
       return {
         message: 'Works loaded successfully',
-        works,
         count,
+        works,
       };
     } catch (error) {
       handleErrors(error, this.logger);
@@ -166,14 +186,12 @@ export class WorkService {
             ],
           }),
         },
-        skip: offset || PaginationDefault.OFFSET,
-        take: limit || PaginationDefault.LIMIT,
       });
 
       return {
         message: 'Work tasks loaded successfully',
-        tasks,
         count,
+        tasks,
       };
     } catch (error) {
       handleErrors(error, this.logger);
@@ -203,12 +221,29 @@ export class WorkService {
   async updateWork(workId: number, updateWorkDto: UpdateWorkDto) {
     const { editedBy, ...updateData } = updateWorkDto;
     try {
+      firstDateGreaterThanSecondDate(
+        updateWorkDto.startDate,
+        updateWorkDto.endDate,
+        'Work',
+      );
+
       const work = await this.prismaService.work.findFirst({
         where: { id: workId },
       });
 
       if (!work)
         throw new NotFoundException(`Work with he id ${workId} not found.`);
+
+      const project = await this.prismaService.project.findFirst({
+        where: { id: work.projectId },
+      });
+
+      if (!project)
+        throw new NotFoundException(
+          `Project with the id ${work.projectId} not found.`,
+        );
+
+      validateParentAndChildDates(updateWorkDto, project, 'work', 'project');
 
       const user = await this.prismaService.user.findFirst({
         where: { id: editedBy },

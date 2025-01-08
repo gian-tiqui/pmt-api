@@ -10,10 +10,10 @@ import { FindAllDto } from 'src/project/dto/find-all.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { handleErrors } from 'src/utils/functions';
 import { LogMethod, LogType, PaginationDefault } from 'src/utils/enums';
-import { Inject } from '@nestjs/common';
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import { Cache } from 'cache-manager';
-import { Comment } from '@prisma/client';
+// import { Inject } from '@nestjs/common';
+// import { CACHE_MANAGER } from '@nestjs/cache-manager';
+// import { Cache } from 'cache-manager';
+// import { Comment } from '@prisma/client';
 
 @Injectable()
 export class CommentService {
@@ -21,7 +21,7 @@ export class CommentService {
 
   constructor(
     private readonly prismaService: PrismaService,
-    @Inject(CACHE_MANAGER) private cache: Cache,
+    // @Inject(CACHE_MANAGER) private cache: Cache,
   ) {}
 
   async createComment(createCommentDto: CreateCommentDto) {
@@ -57,13 +57,14 @@ export class CommentService {
   async findComments(query: FindAllDto) {
     const { search, offset, limit, sortOrder, sortBy } = query;
     const orderBy = sortBy ? { [sortBy]: sortOrder || 'asc' } : undefined;
-    const queryString: string = JSON.stringify(query);
+    // const queryString: string = JSON.stringify(query);
     try {
       let comments;
       let count;
+      let cachedComments;
 
-      const cachedComments: { comments: Comment[]; count: number } =
-        await this.cache.get(queryString);
+      // cachedComments: { comments: Comment[]; count: number } =
+      // await this.cache.get(queryString);
 
       if (cachedComments) {
         comments = cachedComments.comments;
@@ -87,17 +88,15 @@ export class CommentService {
               AND: [{ message: { contains: search, mode: 'insensitive' } }],
             }),
           },
-          skip: offset || PaginationDefault.OFFSET,
-          take: limit || PaginationDefault.LIMIT,
         });
       }
 
-      await this.cache.set(queryString, { comments, count }, 300);
+      // await this.cache.set(queryString, { comments, count }, 300);
 
       return {
         message: 'Comments of the user loaded successfully',
-        comments,
         count,
+        comments,
       };
     } catch (error) {
       handleErrors(error, this.logger);

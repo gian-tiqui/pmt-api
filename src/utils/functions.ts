@@ -5,7 +5,11 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { internalServerErrorMessage } from './messages';
-import { Prisma } from '@prisma/client';
+import { Prisma, Project, Task, Work } from '@prisma/client';
+import { CreateWorkDto } from 'src/work/dto/create-work.dto';
+import { UpdateWorkDto } from 'src/work/dto/update-work.dto';
+import { CreateTaskDto } from 'src/task/dto/create-task.dto';
+import { UpdateTaskDto } from 'src/task/dto/update-task.dto';
 
 const getPreviousValues = (original, updates) => {
   const changes = {};
@@ -46,4 +50,53 @@ const handleErrors = (error: any, logger: Logger, customMessage?: string) => {
   throw new InternalServerErrorException(message);
 };
 
-export { getPreviousValues, handleErrors };
+const firstDateGreaterThanSecondDate = (
+  startDate: Date,
+  endDate: Date,
+  name: string,
+  secondName?: string,
+) => {
+  if (startDate >= endDate) {
+    throw new BadRequestException(
+      `${name} end date must be strictly later than start date ${secondName && `of ${secondName}`}.`,
+    );
+  }
+};
+
+const validateParentAndChildDates = (
+  child:
+    | Project
+    | Work
+    | Task
+    | CreateWorkDto
+    | UpdateWorkDto
+    | CreateTaskDto
+    | UpdateTaskDto,
+  parent:
+    | Project
+    | Work
+    | Task
+    | CreateWorkDto
+    | UpdateWorkDto
+    | CreateTaskDto
+    | UpdateTaskDto,
+  childType: string,
+  parentType: string,
+) => {
+  if (parent.startDate > child.startDate)
+    throw new BadRequestException(
+      `Start date of a ${childType} must be later or same as the start date of the ${parentType}.`,
+    );
+
+  if (parent.endDate < child.endDate)
+    throw new BadRequestException(
+      `End date of the ${childType} must not be later than the ${parentType}`,
+    );
+};
+
+export {
+  getPreviousValues,
+  handleErrors,
+  firstDateGreaterThanSecondDate,
+  validateParentAndChildDates,
+};
