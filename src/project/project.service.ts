@@ -8,7 +8,11 @@ import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { FindAllDto } from './dto/find-all.dto';
-import { getPreviousValues, handleErrors } from 'src/utils/functions';
+import {
+  getPreviousValues,
+  handleErrors,
+  firstDateGreaterThanSecondDate,
+} from 'src/utils/functions';
 import { LogMethod, LogType, PaginationDefault } from 'src/utils/enums';
 
 @Injectable()
@@ -19,6 +23,12 @@ export class ProjectService {
 
   async createProject(createProjectDto: CreateProjectDto) {
     try {
+      firstDateGreaterThanSecondDate(
+        createProjectDto.startDate,
+        createProjectDto.endDate,
+        'Project',
+      );
+
       const user = await this.prismaService.user.findFirst({
         where: { id: createProjectDto.authorId },
       });
@@ -104,11 +114,9 @@ export class ProjectService {
             ],
           }),
         },
-        skip: offset || PaginationDefault.OFFSET,
-        take: limit || PaginationDefault.LIMIT,
       });
 
-      return { message: 'Projects loaded successfully.', projects, count };
+      return { message: 'Projects loaded successfully.', count, projects };
     } catch (error) {
       handleErrors(error, this.logger);
     }
@@ -185,14 +193,12 @@ export class ProjectService {
             ],
           }),
         },
-        skip: offset || PaginationDefault.OFFSET,
-        take: limit || PaginationDefault.LIMIT,
       });
 
       return {
-        works,
-        count,
         message: 'Works of the Project loaded successfully',
+        count,
+        works,
       };
     } catch (error) {
       handleErrors(error, this.logger);
@@ -223,6 +229,12 @@ export class ProjectService {
   async updateProject(projectId: number, updateProjectDto: UpdateProjectDto) {
     try {
       const { userId, ...updateData } = updateProjectDto;
+
+      firstDateGreaterThanSecondDate(
+        updateData.startDate,
+        updateData.endDate,
+        'Project',
+      );
 
       const project = await this.prismaService.project.findFirst({
         where: { id: projectId },

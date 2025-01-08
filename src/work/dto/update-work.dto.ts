@@ -1,4 +1,11 @@
-import { IsInt, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { Type } from 'class-transformer';
+import {
+  IsDate,
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 
 export class UpdateWorkDto {
   @IsOptional()
@@ -16,4 +23,14 @@ export class UpdateWorkDto {
   @IsString()
   @IsOptional()
   type?: string;
+
+  @IsOptional()
+  @IsDate()
+  @Type(() => Date)
+  startDate: Date;
+
+  @IsOptional()
+  @IsDate()
+  @Type(() => Date)
+  endDate: Date;
 }

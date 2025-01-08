@@ -82,14 +82,12 @@ export class UserService {
           ...(departmentId && { departmentId }),
           ...(divisionId && { divisionId }),
         },
-        skip: offset || PaginationDefault.OFFSET,
-        take: limit || PaginationDefault.LIMIT,
       });
 
       return {
         message: 'Users loaded successfully.',
-        users,
         count,
+        users,
       };
     } catch (error) {
       handleErrors(error, this.logger);
@@ -145,14 +143,12 @@ export class UserService {
             AND: [{ message: { contains: search, mode: 'insensitive' } }],
           }),
         },
-        skip: offset || PaginationDefault.OFFSET,
-        take: limit || PaginationDefault.LIMIT,
       });
 
       return {
         message: 'Comments of the user loaded successfully',
-        comments,
         count,
+        comments,
       };
     } catch (error) {
       handleErrors(error, this.logger);
@@ -235,14 +231,12 @@ export class UserService {
             ],
           }),
         },
-        skip: offset || PaginationDefault.OFFSET,
-        take: limit || PaginationDefault.LIMIT,
       });
 
       return {
         message: 'Works of the user loaded successfully.',
-        works,
         count,
+        works,
       };
     } catch (error) {
       handleErrors(error, this.logger);
@@ -301,6 +295,13 @@ export class UserService {
     };
 
     try {
+      const user = await this.prismaService.user.findFirst({
+        where: { id: userId },
+      });
+
+      if (!user)
+        throw new NotFoundException(`User with the id ${userId} not found.`);
+
       const tasks = await this.prismaService.task.findMany({
         where: {
           assignedToId: userId,
@@ -328,14 +329,12 @@ export class UserService {
           }),
           ...options,
         },
-        skip: offset || PaginationDefault.OFFSET,
-        take: limit || PaginationDefault.LIMIT,
       });
 
       return {
         message: 'Tasks loaded successfully.',
-        tasks,
         count,
+        tasks,
       };
     } catch (error) {
       handleErrors(error, this.logger);
@@ -391,6 +390,13 @@ export class UserService {
         authorId: userId,
       };
 
+      const user = await this.prismaService.user.findFirst({
+        where: { id: userId },
+      });
+
+      if (!user)
+        throw new NotFoundException(`User with the id ${userId} not found.`);
+
       const projects = await this.prismaService.project.findMany({
         where: {
           ...options,
@@ -426,11 +432,9 @@ export class UserService {
             ],
           }),
         },
-        skip: offset || PaginationDefault.OFFSET,
-        take: limit || PaginationDefault.LIMIT,
       });
 
-      return { message: 'Projects loaded successfully.', projects, count };
+      return { message: 'Projects loaded successfully.', count, projects };
     } catch (error) {
       handleErrors(error, this.logger);
     }

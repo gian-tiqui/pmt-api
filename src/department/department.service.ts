@@ -59,15 +59,12 @@ export class DepartmentService {
             ],
           }),
         },
-        orderBy,
-        skip: offset || PaginationDefault.OFFSET,
-        take: limit || PaginationDefault.LIMIT,
       });
 
       return {
         message: 'Departments loaded successfully',
-        departments,
         count,
+        departments,
       };
     } catch (error) {
       handleErrors(error, this.logger);

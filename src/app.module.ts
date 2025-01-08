@@ -12,6 +12,7 @@ import { LogModule } from './log/log.module';
 import { AuthModule } from './auth/auth.module';
 import { MentionModule } from './mention/mention.module';
 import { CacheModule } from '@nestjs/cache-manager';
+import { DivisionModule } from './division/division.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { CacheModule } from '@nestjs/cache-manager';
     LogModule,
     AuthModule,
     MentionModule,
+    DivisionModule,
   ],
   controllers: [],
   providers: [
