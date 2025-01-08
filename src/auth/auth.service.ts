@@ -5,13 +5,14 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { RegisterDto } from './dto/register.dto';
-import { PrismaService } from 'src/prisma/prisma.service';
+import { PrismaService } from '../prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { handleErrors } from 'src/utils/functions';
+
 import * as argon from 'argon2';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { handleErrors } from '../utils/functions';
 
 @Injectable()
 export class AuthService {
@@ -155,7 +156,7 @@ export class AuthService {
       });
 
       if (!logout)
-        throw new BadRequestException('There was a problme in logging out.');
+        throw new BadRequestException('There was a problem in logging out.');
 
       return {
         message: 'Logged out successfully.',
