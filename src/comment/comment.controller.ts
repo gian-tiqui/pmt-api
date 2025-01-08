@@ -53,6 +53,20 @@ export class CommentController {
   }
 
   @RateLimit({
+    keyPrefix: 'get-comment-mentions',
+    points: 10,
+    duration: 60,
+    errorMessage: 'Please wait before getting a comment.',
+  })
+  @Get(':commentId/mentions')
+  findCommentMentions(
+    @Param('commentId', ParseIntPipe) commentId: number,
+    @Query() query: FindAllDto,
+  ) {
+    return this.commentService.findCommentMentions(commentId, query);
+  }
+
+  @RateLimit({
     keyPrefix: 'update-comment',
     points: 10,
     duration: 60,
