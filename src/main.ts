@@ -1,20 +1,11 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { Logger, ValidationPipe, VersioningType } from '@nestjs/common';
-// import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
   const PORT = parseInt(process.env.PORT, 10) || 8080;
   const logger = new Logger('WMC Project Management Tool');
   const app = await NestFactory.create(AppModule);
-  // const config = new DocumentBuilder()
-  //   .setTitle('WMC Project Management Tool API')
-  //   .setDescription('API Documentation for WMC Project Management Tool ')
-  //   .setVersion('1.0')
-  //   .build();
-
-  // const document = SwaggerModule.createDocument(app, config);
-  // SwaggerModule.setup('api-docs', app, document);
 
   app.enableCors({
     origin: ['*'],
