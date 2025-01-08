@@ -123,6 +123,44 @@ export class CommentService {
     }
   }
 
+  async findCommentMentions(commentId: number, query: FindAllDto) {
+    const { search, offset, limit, sortBy, sortOrder } = query;
+
+    const orderBy = sortBy ? { [sortBy]: sortOrder || 'asc' } : undefined;
+
+    try {
+      const comment = await this.prismaService.comment.findFirst({
+        where: { id: commentId },
+      });
+
+      const mentions = await this.prismaService.mention.findMany({
+        where: {
+          commentId,
+        },
+        orderBy,
+        skip: offset || PaginationDefault.OFFSET,
+        take: limit || PaginationDefault.LIMIT,
+      });
+
+      const count = await this.prismaService.mention.count({
+        where: { commentId },
+      });
+
+      if (!comment)
+        throw new NotFoundException(
+          `Comment with the id ${commentId} not found.`,
+        );
+
+      return {
+        message: 'Mention of the comment retrieved successfully.',
+        count,
+        mentions,
+      };
+    } catch (error) {
+      handleErrors(error, this.logger);
+    }
+  }
+
   async updateComment(commentId: number, updateCommentDto: UpdateCommentDto) {
     const { userId, mentions, ...updateData } = updateCommentDto;
 
