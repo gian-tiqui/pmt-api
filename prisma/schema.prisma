@@ -81,8 +81,8 @@ model Mention {
 
 model Task {
   id           Int        @id @default(autoincrement())
-  type         String
-  status       String?    @default("todo")   
+  type         String     // TASK, SUBTASK, BUG, STORY
+  status       String?    @default("todo") // todo, on-going, done
   description  String?
   title        String
   startDate    DateTime?
@@ -103,7 +103,7 @@ model Task {
 model Work {
   id           Int        @id @default(autoincrement())
   name         String
-  type         String
+  type         String     // EPIC, STORY, BUG
   description  String?
   authorId     Int
   author       User       @relation(fields: [authorId], references: [id])

@@ -12,6 +12,7 @@ import {
   getPreviousValues,
   handleErrors,
   firstDateGreaterThanSecondDate,
+  validateProjectDepth,
 } from 'src/utils/functions';
 import { LogMethod, LogType, PaginationDefault } from 'src/utils/enums';
 
@@ -238,7 +239,12 @@ export class ProjectService {
 
       const project = await this.prismaService.project.findFirst({
         where: { id: projectId },
+        include: {
+          works: { include: { tasks: { include: { subtasks: true } } } },
+        },
       });
+
+      validateProjectDepth(project, project.works);
 
       if (!project)
         throw new NotFoundException(
