@@ -81,6 +81,20 @@ export class TaskController {
   }
 
   @RateLimit({
+    keyPrefix: 'get-task-users',
+    points: 10,
+    duration: 60,
+    errorMessage: `Please wait before loading a project's works.`,
+  })
+  @Get(':taskId/user')
+  findTaskUsers(
+    @Param('taskId', ParseIntPipe) taskId: number,
+    @Query() query: FindAllDto,
+  ) {
+    return this.taskService.findTaskUsers(taskId, query);
+  }
+
+  @RateLimit({
     keyPrefix: 'get-task-comments',
     points: 10,
     duration: 60,
