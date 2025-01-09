@@ -7,6 +7,7 @@ import {
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import {
+  filterUsers,
   firstDateGreaterThanSecondDate,
   getPreviousValues,
   handleErrors,
@@ -253,6 +254,47 @@ export class TaskService {
     }
   }
 
+  async findTaskUsers(taskId: number, query: FindAllDto) {
+    const { search, offset, limit, sortBy, sortOrder } = query;
+
+    const orderBy = sortBy ? { [sortBy]: sortOrder || 'asc' } : undefined;
+
+    try {
+      const task = await this.prismaService.task.findFirst({
+        where: { id: taskId },
+        select: { subtasks: { select: { assignedTo: true } } },
+      });
+
+      const users = task.subtasks.map((subtask) => subtask.assignedTo);
+
+      if (!task)
+        throw new BadRequestException(`Task with the id ${taskId} not found.`);
+
+      return {
+        message: 'Users of the task loaded successfully.',
+        count: task.subtasks.length,
+        users: filterUsers(users, search, offset, limit, orderBy),
+      };
+    } catch (error) {
+      handleErrors(error, this.logger);
+    }
+  }
+
+  async findTaskUser(taskId: number, userId: number) {
+    try {
+      const task = await this.prismaService.task.findFirst({
+        where: { id: taskId, assignedToId: userId },
+      });
+
+      if (!task)
+        throw new NotFoundException(
+          `User with the id ${userId} is not found in task ${taskId}`,
+        );
+    } catch (error) {
+      handleErrors(error, this.logger);
+    }
+  }
+
   async findTaskComments(taskId: number, query: FindAllDto) {
     const { search, sortBy, sortOrder, offset, limit } = query;
     const orderBy = sortBy ? { [sortBy]: sortOrder || 'asc' } : undefined;
@@ -319,6 +361,9 @@ export class TaskService {
 
       if (!task)
         throw new NotFoundException(`Task with the id ${taskId} not found.`);
+
+      if (!task.current)
+        throw new BadRequestException(`The task cannot be edited.`);
 
       const user = await this.prismaService.user.findFirst({
         where: { id: userId },

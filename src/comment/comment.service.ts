@@ -136,7 +136,16 @@ export class CommentService {
       const mentions = await this.prismaService.mention.findMany({
         where: {
           commentId,
+          user: search
+            ? {
+                OR: [
+                  { firstName: { contains: search, mode: 'insensitive' } },
+                  { email: { contains: search, mode: 'insensitive' } },
+                ],
+              }
+            : undefined,
         },
+        select: { user: true },
         orderBy,
         skip: offset || PaginationDefault.OFFSET,
         take: limit || PaginationDefault.LIMIT,

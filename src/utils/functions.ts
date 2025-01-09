@@ -5,11 +5,12 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { internalServerErrorMessage } from './messages';
-import { Prisma, Project, Task, Work } from '@prisma/client';
+import { Prisma, Project, Task, User, Work } from '@prisma/client';
 import { CreateWorkDto } from 'src/work/dto/create-work.dto';
 import { UpdateWorkDto } from 'src/work/dto/update-work.dto';
 import { CreateTaskDto } from 'src/task/dto/create-task.dto';
 import { UpdateTaskDto } from 'src/task/dto/update-task.dto';
+import { PaginationDefault } from './enums';
 
 const getPreviousValues = (original, updates) => {
   const changes = {};
@@ -94,9 +95,43 @@ const validateParentAndChildDates = (
     );
 };
 
+const filterUsers = (
+  users: User[],
+  search: string,
+  offset: number,
+  limit: number,
+  orderBy: any,
+): User[] => {
+  let filteredUsers = users;
+
+  if (search) {
+    const lowerSearch = search.toLowerCase();
+    filteredUsers = filteredUsers.filter((user) =>
+      ['firstName', 'middleName', 'lastName'].some((field) =>
+        user[field]?.toString().toLowerCase().includes(lowerSearch),
+      ),
+    );
+  }
+
+  if (orderBy) {
+    const [sortField, sortOrder] = Object.entries(orderBy)[0];
+    filteredUsers = filteredUsers.sort((a, b) => {
+      if (a[sortField] < b[sortField]) return sortOrder === 'asc' ? -1 : 1;
+      if (a[sortField] > b[sortField]) return sortOrder === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }
+
+  const start = offset || PaginationDefault.OFFSET;
+  const end = limit ? start + limit : PaginationDefault.LIMIT;
+
+  return filteredUsers.slice(start, end);
+};
+
 export {
   getPreviousValues,
   handleErrors,
   firstDateGreaterThanSecondDate,
   validateParentAndChildDates,
+  filterUsers,
 };
