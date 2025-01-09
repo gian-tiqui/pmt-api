@@ -128,10 +128,19 @@ const filterUsers = (
   return filteredUsers.slice(start, end);
 };
 
+const validateProjectDepth = (project: Project, works: Work[]) => {};
+
+const validateWorkDepth = (work: Work, task: Task[]) => {};
+
+const validateTaskDepth = (task: Task, subTasks: Task[]) => {};
+
 export {
   getPreviousValues,
   handleErrors,
   firstDateGreaterThanSecondDate,
   validateParentAndChildDates,
   filterUsers,
+  validateProjectDepth,
+  validateWorkDepth,
+  validateTaskDepth,
 };
