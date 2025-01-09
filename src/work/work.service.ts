@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  Inject,
   Injectable,
   Logger,
   NotFoundException,
@@ -14,13 +15,24 @@ import {
   validateParentAndChildDates,
 } from 'src/utils/functions';
 import { FindAllDto } from 'src/project/dto/find-all.dto';
-import { LogMethod, LogType, PaginationDefault } from 'src/utils/enums';
+import {
+  CacheConfig,
+  LogMethod,
+  LogType,
+  PaginationDefault,
+} from 'src/utils/enums';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
+import { Work } from '@prisma/client';
 
 @Injectable()
 export class WorkService {
   private logger = new Logger('WorkService');
 
-  constructor(private readonly prismaService: PrismaService) {}
+  constructor(
+    private readonly prismaService: PrismaService,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
+  ) {}
 
   async createWork(createWorkDto: CreateWorkDto) {
     try {
@@ -56,6 +68,8 @@ export class WorkService {
         },
       });
 
+      this.cacheManager.reset();
+
       return {
         message: 'Work created successfully',
       };
@@ -67,6 +81,7 @@ export class WorkService {
   async findWorks(query: FindAllDto) {
     const { search, offset, limit, type, dateWithin, sortOrder, sortBy } =
       query;
+    const workCacheKey = JSON.stringify(query);
     const orderBy = sortBy ? { [sortBy]: sortOrder || 'asc' } : undefined;
     const options = {
       ...(dateWithin && {
@@ -79,32 +94,48 @@ export class WorkService {
     };
 
     try {
-      const works = await this.prismaService.work.findMany({
-        where: {
-          ...options,
-          ...(search && {
-            OR: [
-              { name: { contains: search, mode: 'insensitive' } },
-              { description: { contains: search, mode: 'insensitive' } },
-            ],
-          }),
-        },
-        orderBy,
-        skip: offset || PaginationDefault.OFFSET,
-        take: limit || PaginationDefault.LIMIT,
-      });
+      let works;
+      let count;
+      const cachedWork: { works: Work[]; count: number } =
+        await this.cacheManager.get(workCacheKey);
 
-      const count = await this.prismaService.work.count({
-        where: {
-          ...options,
-          ...(search && {
-            OR: [
-              { name: { contains: search, mode: 'insensitive' } },
-              { description: { contains: search, mode: 'insensitive' } },
-            ],
-          }),
-        },
-      });
+      if (cachedWork) {
+        works = cachedWork.works;
+        count = cachedWork.count;
+      } else {
+        works = await this.prismaService.work.findMany({
+          where: {
+            ...options,
+            ...(search && {
+              OR: [
+                { name: { contains: search, mode: 'insensitive' } },
+                { description: { contains: search, mode: 'insensitive' } },
+              ],
+            }),
+          },
+          orderBy,
+          skip: offset || PaginationDefault.OFFSET,
+          take: limit || PaginationDefault.LIMIT,
+        });
+
+        count = await this.prismaService.work.count({
+          where: {
+            ...options,
+            ...(search && {
+              OR: [
+                { name: { contains: search, mode: 'insensitive' } },
+                { description: { contains: search, mode: 'insensitive' } },
+              ],
+            }),
+          },
+        });
+      }
+
+      await this.cacheManager.set(
+        workCacheKey,
+        { works, count },
+        CacheConfig.TTL,
+      );
 
       return {
         message: 'Works loaded successfully',

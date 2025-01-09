@@ -9,11 +9,16 @@ import { UpdateCommentDto } from './dto/update-comment.dto';
 import { FindAllDto } from 'src/project/dto/find-all.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { handleErrors } from 'src/utils/functions';
-import { LogMethod, LogType, PaginationDefault } from 'src/utils/enums';
-// import { Inject } from '@nestjs/common';
-// import { CACHE_MANAGER } from '@nestjs/cache-manager';
-// import { Cache } from 'cache-manager';
-// import { Comment } from '@prisma/client';
+import {
+  CacheConfig,
+  LogMethod,
+  LogType,
+  PaginationDefault,
+} from 'src/utils/enums';
+import { Inject } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
+import { Comment, Mention } from '@prisma/client';
 
 @Injectable()
 export class CommentService {
@@ -21,7 +26,7 @@ export class CommentService {
 
   constructor(
     private readonly prismaService: PrismaService,
-    // @Inject(CACHE_MANAGER) private cache: Cache,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
   async createComment(createCommentDto: CreateCommentDto) {
@@ -45,6 +50,8 @@ export class CommentService {
           `There was a problem in creating the comment.`,
         );
 
+      this.cacheManager.reset();
+
       return {
         message: 'Comment created successfully.',
         comment: newComment,
@@ -57,16 +64,15 @@ export class CommentService {
   async findComments(query: FindAllDto) {
     const { search, offset, limit, sortOrder, sortBy } = query;
     const orderBy = sortBy ? { [sortBy]: sortOrder || 'asc' } : undefined;
-    // const queryString: string = JSON.stringify(query);
+    const commentCacheKey = JSON.stringify(query);
     try {
       let comments;
       let count;
-      let cachedComments;
-
-      // cachedComments: { comments: Comment[]; count: number } =
-      // await this.cache.get(queryString);
+      const cachedComments: { comments: Comment[]; count: number } =
+        await this.cacheManager.get(commentCacheKey);
 
       if (cachedComments) {
+        this.logger.log('hit');
         comments = cachedComments.comments;
         count = cachedComments.count;
       } else {
@@ -91,7 +97,11 @@ export class CommentService {
         });
       }
 
-      // await this.cache.set(queryString, { comments, count }, 300);
+      await this.cacheManager.set(
+        commentCacheKey,
+        { comments, count },
+        CacheConfig.TTL,
+      );
 
       return {
         message: 'Comments of the user loaded successfully',
@@ -104,15 +114,27 @@ export class CommentService {
   }
 
   async findComment(commentId: number) {
+    const commentCacheKey = `comment-${commentId}`;
     try {
-      const comment = await this.prismaService.comment.findFirst({
-        where: { id: commentId },
-      });
+      let comment: Comment;
+
+      const cachedComment: Comment =
+        await this.cacheManager.get(commentCacheKey);
+
+      if (cachedComment) {
+        comment = cachedComment;
+      } else {
+        comment = await this.prismaService.comment.findFirst({
+          where: { id: commentId },
+        });
+      }
 
       if (!comment)
         throw new NotFoundException(
           `Comment with the id ${commentId} not found.`,
         );
+
+      await this.cacheManager.set(commentCacheKey, comment, CacheConfig.TTL);
 
       return {
         message: 'Comment loaded successfully',
@@ -125,6 +147,7 @@ export class CommentService {
 
   async findCommentMentions(commentId: number, query: FindAllDto) {
     const { search, offset, limit, sortBy, sortOrder } = query;
+    const commentMentionKey = JSON.stringify(query);
 
     const orderBy = sortBy ? { [sortBy]: sortOrder || 'asc' } : undefined;
 
@@ -133,32 +156,58 @@ export class CommentService {
         where: { id: commentId },
       });
 
-      const mentions = await this.prismaService.mention.findMany({
-        where: {
-          commentId,
-          user: search
-            ? {
-                OR: [
-                  { firstName: { contains: search, mode: 'insensitive' } },
-                  { email: { contains: search, mode: 'insensitive' } },
-                ],
-              }
-            : undefined,
-        },
-        select: { user: true },
-        orderBy,
-        skip: offset || PaginationDefault.OFFSET,
-        take: limit || PaginationDefault.LIMIT,
-      });
-
-      const count = await this.prismaService.mention.count({
-        where: { commentId },
-      });
-
       if (!comment)
         throw new NotFoundException(
           `Comment with the id ${commentId} not found.`,
         );
+
+      let mentions;
+      let count;
+      const cachedMentions: { mentions: Mention[]; count: number } =
+        await this.cacheManager.get(commentMentionKey);
+
+      if (cachedMentions) {
+        mentions = cachedMentions.mentions;
+        count = cachedMentions.count;
+      } else {
+        mentions = await this.prismaService.mention.findMany({
+          where: {
+            commentId,
+            user: search
+              ? {
+                  OR: [
+                    { firstName: { contains: search, mode: 'insensitive' } },
+                    { email: { contains: search, mode: 'insensitive' } },
+                  ],
+                }
+              : undefined,
+          },
+          select: { user: true },
+          orderBy,
+          skip: offset || PaginationDefault.OFFSET,
+          take: limit || PaginationDefault.LIMIT,
+        });
+
+        count = await this.prismaService.mention.count({
+          where: {
+            commentId,
+            user: search
+              ? {
+                  OR: [
+                    { firstName: { contains: search, mode: 'insensitive' } },
+                    { email: { contains: search, mode: 'insensitive' } },
+                  ],
+                }
+              : undefined,
+          },
+        });
+      }
+
+      this.cacheManager.set(
+        commentMentionKey,
+        { mentions, count },
+        CacheConfig.TTL,
+      );
 
       return {
         message: 'Mention of the comment retrieved successfully.',
@@ -204,6 +253,8 @@ export class CommentService {
         data: { mentions: { create: convertedMentions }, ...updateData },
       });
 
+      await this.cacheManager.reset();
+
       return {
         message: 'Comment deleted successfully.',
       };
@@ -238,6 +289,8 @@ export class CommentService {
       await this.prismaService.comment.delete({
         where: { id: commentId, userId },
       });
+
+      await this.cacheManager.reset();
 
       return {
         message: 'Comment deleted successfully.',

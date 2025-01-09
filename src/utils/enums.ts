@@ -23,4 +23,8 @@ enum LogType {
   WORK = 7,
 }
 
-export { LogMethod, PaginationDefault, Status, LogType };
+enum CacheConfig {
+  TTL = 1000000000,
+}
+
+export { LogMethod, PaginationDefault, Status, LogType, CacheConfig };
