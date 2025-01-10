@@ -65,6 +65,10 @@ export class CommentService {
           );
 
           this.commentCacheKeys = [];
+
+          this.logger.verbose(
+            'findComments, findCommentMentions cache cleared.',
+          );
         } catch (error) {
           handleErrors(error, this.logger);
         }
@@ -81,19 +85,18 @@ export class CommentService {
   async findComments(query: FindAllDto) {
     const { search, offset, limit, sortOrder, sortBy } = query;
     const orderBy = sortBy ? { [sortBy]: sortOrder || 'asc' } : undefined;
-    const commentsCacheKey = `${this.namespace}${JSON.stringify(query)}`;
+    const findCommentsCacheKey = `${this.namespace}${JSON.stringify(query)}`;
     try {
-      let comments;
-      let count;
+      let comments, count;
       const cachedComments: { comments: Comment[]; count: number } =
-        await this.cacheManager.get(commentsCacheKey);
+        await this.cacheManager.get(findCommentsCacheKey);
 
       if (cachedComments) {
-        this.logger.debug('Cache hit.');
+        this.logger.debug('Comments cache hit.');
         comments = cachedComments.comments;
         count = cachedComments.count;
       } else {
-        this.logger.debug('Cache missed.');
+        this.logger.debug('Comments cache missed.');
         comments = await this.prismaService.comment.findMany({
           where: {
             ...(search && {
@@ -114,9 +117,9 @@ export class CommentService {
           },
         });
 
-        await this.cacheManager.set(commentsCacheKey, { comments, count });
+        await this.cacheManager.set(findCommentsCacheKey, { comments, count });
 
-        this.commentCacheKeys.push(commentsCacheKey);
+        this.commentCacheKeys.push(findCommentsCacheKey);
       }
 
       return {
@@ -130,12 +133,12 @@ export class CommentService {
   }
 
   async findComment(commentId: number) {
-    const commentCacheKey = `comment-${commentId}`;
+    const findCommentCacheKey = `${this.namespace}${commentId}`;
     try {
       let comment: Comment;
 
       const cachedComment: Comment =
-        await this.cacheManager.get(commentCacheKey);
+        await this.cacheManager.get(findCommentCacheKey);
 
       if (cachedComment) {
         this.logger.debug('Cache hit.');
@@ -146,7 +149,7 @@ export class CommentService {
           where: { id: commentId },
         });
 
-        await this.cacheManager.set(commentCacheKey, comment);
+        await this.cacheManager.set(findCommentCacheKey, comment);
       }
 
       if (!comment)
@@ -165,7 +168,7 @@ export class CommentService {
 
   async findCommentMentions(commentId: number, query: FindAllDto) {
     const { search, offset, limit, sortBy, sortOrder } = query;
-    const commentMentionCacheKey = `${this.namespace}comment${commentId}-${JSON.stringify(query)}`;
+    const findCommentMentionsCacheKey = `${this.namespace}comment-${commentId}-${JSON.stringify(query)}`;
 
     const orderBy = sortBy ? { [sortBy]: sortOrder || 'asc' } : undefined;
 
@@ -179,10 +182,9 @@ export class CommentService {
           `Comment with the id ${commentId} not found.`,
         );
 
-      let mentions;
-      let count;
+      let mentions, count;
       const cachedMentions: { mentions: Mention[]; count: number } =
-        await this.cacheManager.get(commentMentionCacheKey);
+        await this.cacheManager.get(findCommentMentionsCacheKey);
 
       if (cachedMentions) {
         this.logger.debug(`Cache hit.`);
@@ -222,12 +224,12 @@ export class CommentService {
           },
         });
 
-        await this.cacheManager.set(commentMentionCacheKey, {
+        await this.cacheManager.set(findCommentMentionsCacheKey, {
           mentions,
           count,
         });
 
-        this.commentCacheKeys.push(commentMentionCacheKey);
+        this.commentCacheKeys.push(findCommentMentionsCacheKey);
       }
 
       return {
@@ -276,7 +278,9 @@ export class CommentService {
         data: { mentions: { create: convertedMentions }, ...updateData },
       });
 
-      this.cacheManager.set(`comment-${comment.id}`, {
+      const updateCommentCacheKey = `comment-${comment.id}`;
+
+      await this.cacheManager.set(updateCommentCacheKey, {
         ...comment,
         ...updateData,
       });
@@ -316,7 +320,9 @@ export class CommentService {
         where: { id: commentId, userId },
       });
 
-      await this.cacheManager.del(`comment-${comment.id}`);
+      const deleteCommentCacheKey = `comment-${comment.id}`;
+
+      await this.cacheManager.del(deleteCommentCacheKey);
 
       return {
         message: 'Comment deleted successfully.',

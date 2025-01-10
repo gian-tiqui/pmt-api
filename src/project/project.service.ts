@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  Inject,
   Injectable,
   Logger,
   NotFoundException,
@@ -15,12 +16,20 @@ import {
   validateProjectDepth,
 } from 'src/utils/functions';
 import { LogMethod, LogType, PaginationDefault } from 'src/utils/enums';
+import { Cache } from 'cache-manager';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Project, Work } from '@prisma/client';
 
 @Injectable()
 export class ProjectService {
   private logger = new Logger('ProjectService');
+  private namespace: string = 'PROJECT:';
+  private projectCacheKeys: string[] = [];
 
-  constructor(private readonly prismaService: PrismaService) {}
+  constructor(
+    private readonly prismaService: PrismaService,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
+  ) {}
 
   async createProject(createProjectDto: CreateProjectDto) {
     try {
@@ -49,6 +58,20 @@ export class ProjectService {
         },
       });
 
+      if (this.projectCacheKeys.length > 0) {
+        try {
+          await Promise.all(
+            this.projectCacheKeys.map((key) => this.cacheManager.del(key)),
+          );
+
+          this.projectCacheKeys = [];
+
+          this.logger.verbose('Projects find all cache cleared.');
+        } catch (error) {
+          handleErrors(error, this.logger);
+        }
+      }
+
       return { message: 'Project created successfully.' };
     } catch (error) {
       handleErrors(error, this.logger);
@@ -66,56 +89,76 @@ export class ProjectService {
       sortOrder,
       dateWithin,
     } = query;
+    const findProjectsCacheKey = `${this.namespace}${JSON.stringify(query)}`;
 
     try {
-      const orderBy = sortBy ? { [sortBy]: sortOrder || 'asc' } : undefined;
-      const options = {
-        ...(status && { status }),
-        ...(dateWithin && {
-          AND: [
-            { startDate: { gte: dateWithin } },
-            { endDate: { lte: dateWithin } },
-          ],
-        }),
-        ...(authorId && { authorId }),
-      };
+      let projects, count;
+      const cachedProjects: { projects: Project[]; count: number } =
+        await this.cacheManager.get(findProjectsCacheKey);
 
-      const projects = await this.prismaService.project.findMany({
-        where: {
-          ...options,
-          ...(search && {
-            OR: [
-              { name: { contains: search.toLowerCase(), mode: 'insensitive' } },
-              {
-                description: {
-                  contains: search.toLowerCase(),
-                  mode: 'insensitive',
-                },
-              },
+      if (cachedProjects) {
+        this.logger.debug(`Projects cache hit.`);
+        projects = cachedProjects.projects;
+        count = cachedProjects.count;
+      } else {
+        this.logger.debug(`Projects cache missed.`);
+        const orderBy = sortBy ? { [sortBy]: sortOrder || 'asc' } : undefined;
+        const options = {
+          ...(status && { status }),
+          ...(dateWithin && {
+            AND: [
+              { startDate: { gte: dateWithin } },
+              { endDate: { lte: dateWithin } },
             ],
           }),
-        },
-        orderBy,
-        skip: offset || PaginationDefault.OFFSET,
-        take: limit || PaginationDefault.LIMIT,
-      });
+          ...(authorId && { authorId }),
+        };
 
-      const count = await this.prismaService.project.count({
-        where: {
-          ...options,
-          ...(search && {
-            OR: [
-              { name: { contains: search.toLowerCase(), mode: 'insensitive' } },
-              {
-                description: {
-                  contains: search.toLowerCase(),
-                  mode: 'insensitive',
+        projects = await this.prismaService.project.findMany({
+          where: {
+            ...options,
+            ...(search && {
+              OR: [
+                {
+                  name: { contains: search.toLowerCase(), mode: 'insensitive' },
                 },
-              },
-            ],
-          }),
-        },
-      });
+                {
+                  description: {
+                    contains: search.toLowerCase(),
+                    mode: 'insensitive',
+                  },
+                },
+              ],
+            }),
+          },
+          orderBy,
+          skip: offset || PaginationDefault.OFFSET,
+          take: limit || PaginationDefault.LIMIT,
+        });
+
+        count = await this.prismaService.project.count({
+          where: {
+            ...options,
+            ...(search && {
+              OR: [
+                {
+                  name: { contains: search.toLowerCase(), mode: 'insensitive' },
+                },
+                {
+                  description: {
+                    contains: search.toLowerCase(),
+                    mode: 'insensitive',
+                  },
+                },
+              ],
+            }),
+          },
+        });
+
+        await this.cacheManager.set(findProjectsCacheKey, { projects, count });
+
+        this.projectCacheKeys.push(findProjectsCacheKey);
+      }
 
       return { message: 'Projects loaded successfully.', count, projects };
     } catch (error) {
@@ -125,10 +168,22 @@ export class ProjectService {
 
   async findProject(projectId: number) {
     try {
-      const project = await this.prismaService.project.findFirst({
-        where: { id: projectId },
-        include: { author: { select: { firstName: true, lastName: true } } },
-      });
+      let project;
+      const findProjectKey = `${this.namespace}${projectId}`;
+      const cachedProject = await this.cacheManager.get(findProjectKey);
+
+      if (cachedProject) {
+        this.logger.debug(`Project cache hit.`);
+        project = cachedProject;
+      } else {
+        this.logger.debug(`Project cache missed.`);
+        project = await this.prismaService.project.findFirst({
+          where: { id: projectId },
+          include: { author: { select: { firstName: true, lastName: true } } },
+        });
+
+        await this.cacheManager.set(findProjectKey, project);
+      }
 
       if (!project) {
         throw new NotFoundException(
@@ -146,6 +201,7 @@ export class ProjectService {
     const { offset, limit, search, type, sortBy, sortOrder, dateWithin } =
       query;
     const orderBy = sortBy ? { [sortBy]: sortOrder || 'asc' } : undefined;
+    const findProjectWorksCacheKey = `${this.namespace}project:${projectId}-${query}`;
 
     try {
       const project = await this.prismaService.project.findFirst({
@@ -155,46 +211,63 @@ export class ProjectService {
       if (!project)
         throw new NotFoundException(`Project with the ${projectId} not found.`);
 
-      const works = await this.prismaService.work.findMany({
-        where: {
-          projectId,
-          ...(type && { type: { mode: 'insensitive', equals: type } }),
-          ...(search && {
-            OR: [
-              { name: { contains: search, mode: 'insensitive' } },
-              { description: { contains: search, mode: 'insensitive' } },
-            ],
-          }),
-          ...(dateWithin && {
-            AND: [
-              { startDate: { gte: dateWithin } },
-              { endDate: { lte: dateWithin } },
-            ],
-          }),
-        },
-        skip: offset || PaginationDefault.OFFSET,
-        take: limit || PaginationDefault.LIMIT,
-        orderBy,
-      });
+      let works, count;
+      const cachedProjectWorks: { works: Work[]; count: number } =
+        await this.cacheManager.get(findProjectWorksCacheKey);
 
-      const count = await this.prismaService.work.count({
-        where: {
-          projectId,
-          ...(type && { type: { mode: 'insensitive', equals: type } }),
-          ...(search && {
-            OR: [
-              { name: { contains: search, mode: 'insensitive' } },
-              { description: { contains: search, mode: 'insensitive' } },
-            ],
-          }),
-          ...(dateWithin && {
-            AND: [
-              { startDate: { gte: dateWithin } },
-              { endDate: { lte: dateWithin } },
-            ],
-          }),
-        },
-      });
+      if (cachedProjectWorks) {
+        this.logger.debug(`Project works cache hit.`);
+
+        works = cachedProjectWorks.works;
+        count = cachedProjectWorks.count;
+      } else {
+        this.logger.debug(`Project works cache missed.`);
+
+        works = await this.prismaService.work.findMany({
+          where: {
+            projectId,
+            ...(type && { type: { mode: 'insensitive', equals: type } }),
+            ...(search && {
+              OR: [
+                { name: { contains: search, mode: 'insensitive' } },
+                { description: { contains: search, mode: 'insensitive' } },
+              ],
+            }),
+            ...(dateWithin && {
+              AND: [
+                { startDate: { gte: dateWithin } },
+                { endDate: { lte: dateWithin } },
+              ],
+            }),
+          },
+          skip: offset || PaginationDefault.OFFSET,
+          take: limit || PaginationDefault.LIMIT,
+          orderBy,
+        });
+
+        count = await this.prismaService.work.count({
+          where: {
+            projectId,
+            ...(type && { type: { mode: 'insensitive', equals: type } }),
+            ...(search && {
+              OR: [
+                { name: { contains: search, mode: 'insensitive' } },
+                { description: { contains: search, mode: 'insensitive' } },
+              ],
+            }),
+            ...(dateWithin && {
+              AND: [
+                { startDate: { gte: dateWithin } },
+                { endDate: { lte: dateWithin } },
+              ],
+            }),
+          },
+        });
+
+        await this.cacheManager.set(findProjectWorksCacheKey, { works, count });
+
+        this.projectCacheKeys.push(findProjectWorksCacheKey);
+      }
 
       return {
         message: 'Works of the Project loaded successfully',
@@ -207,11 +280,30 @@ export class ProjectService {
   }
 
   async findProjectWork(projectId: number, workId: number) {
+    const findProjectWorkCacheKey = `${this.namespace}project-${projectId}work-${workId}`;
+
     try {
-      const work = await this.prismaService.work.findFirst({
-        where: { id: workId, projectId },
-        include: { author: { select: { firstName: true, lastName: true } } },
-      });
+      let work;
+      const cachedProjectWork = await this.cacheManager.get(
+        findProjectWorkCacheKey,
+      );
+
+      if (cachedProjectWork) {
+        this.logger.debug(`Project work cache hit.`);
+
+        work = cachedProjectWork;
+      } else {
+        this.logger.debug(`Project work cache missed.`);
+
+        work = await this.prismaService.work.findFirst({
+          where: { id: workId, projectId },
+          include: { author: { select: { firstName: true, lastName: true } } },
+        });
+
+        await this.cacheManager.set(findProjectWorkCacheKey, work);
+
+        this.projectCacheKeys.push(findProjectWorkCacheKey);
+      }
 
       if (!work)
         throw new NotFoundException(
@@ -237,14 +329,17 @@ export class ProjectService {
         'Project',
       );
 
-      const project = await this.prismaService.project.findFirst({
+      const _project = await this.prismaService.project.findFirst({
         where: { id: projectId },
         include: {
           works: { include: { tasks: { include: { subtasks: true } } } },
+          author: { select: { firstName: true, lastName: true } },
         },
       });
 
-      validateProjectDepth(project, project.works);
+      const { works, ...project } = _project;
+
+      validateProjectDepth(project, works);
 
       if (!project)
         throw new NotFoundException(
@@ -281,6 +376,13 @@ export class ProjectService {
         throw new BadRequestException(
           'There was a problem in creating a log for the project',
         );
+
+      const updateProjectCacheKey = `${this.namespace}${projectId}`;
+
+      await this.cacheManager.set(updateProjectCacheKey, {
+        ...project,
+        ...updateData,
+      });
 
       return { message: `Project updated successfully` };
     } catch (error) {
@@ -328,6 +430,10 @@ export class ProjectService {
         throw new BadRequestException(
           'There was a problem in creating the log.',
         );
+
+      const deleteProjectCacheKey = `${this.namespace}${projectId}`;
+
+      await this.cacheManager.del(deleteProjectCacheKey);
 
       return { message: 'Project deleted successfully.' };
     } catch (error) {
