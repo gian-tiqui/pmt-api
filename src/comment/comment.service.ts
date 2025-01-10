@@ -19,7 +19,7 @@ import { Comment, Mention } from '@prisma/client';
 export class CommentService {
   private logger = new Logger('CommentService');
   private commentCacheKeys: string[] = [];
-  private namespace = 'comments:';
+  private namespace = 'COMMENT:';
 
   constructor(
     private readonly prismaService: PrismaService,

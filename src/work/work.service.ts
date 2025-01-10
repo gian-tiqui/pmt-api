@@ -23,6 +23,8 @@ import { Task, Work } from '@prisma/client';
 @Injectable()
 export class WorkService {
   private logger = new Logger('WorkService');
+  private workCacheKeys: string[] = [];
+  private namespace: string = 'WORK:';
 
   constructor(
     private readonly prismaService: PrismaService,
@@ -78,7 +80,7 @@ export class WorkService {
   async findWorks(query: FindAllDto) {
     const { search, offset, limit, type, dateWithin, sortOrder, sortBy } =
       query;
-    const worksCacheKey = JSON.stringify(query);
+    const worksCacheKey = `${this.namespace}${JSON.stringify(query)}`;
     const orderBy = sortBy ? { [sortBy]: sortOrder || 'asc' } : undefined;
     const options = {
       ...(dateWithin && {
