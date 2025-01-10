@@ -74,9 +74,9 @@ model Comment {
 model Mention {
   id        Int      @id @default(autoincrement())
   userId    Int
-  user      User     @relation("MentionedIn", fields: [userId], references: [id])
+  user      User     @relation("MentionedIn", fields: [userId], references: [id], onDelete: Cascade)
   commentId Int
-  comment   Comment  @relation("Mentions", fields: [commentId], references: [id])
+  comment   Comment  @relation("Mentions", fields: [commentId], references: [id], onDelete: Cascade)
 }
 
 model Task {

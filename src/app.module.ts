@@ -10,15 +10,16 @@ import { RateLimiterGuard, RateLimiterModule } from 'nestjs-rate-limiter';
 import { APP_GUARD } from '@nestjs/core';
 import { LogModule } from './log/log.module';
 import { AuthModule } from './auth/auth.module';
-import { MentionModule } from './mention/mention.module';
 import { CacheModule } from '@nestjs/cache-manager';
 import { DivisionModule } from './division/division.module';
+import { CacheConfig } from './utils/enums';
 
 @Module({
   imports: [
     CacheModule.register({
-      ttl: 5,
-      max: 100,
+      ttl: CacheConfig.TTL,
+      max: CacheConfig.MAX,
+      isGlobal: true,
     }),
     RateLimiterModule,
     ProjectModule,
@@ -30,7 +31,6 @@ import { DivisionModule } from './division/division.module';
     ConfigModule.forRoot({ isGlobal: true }),
     LogModule,
     AuthModule,
-    MentionModule,
     DivisionModule,
   ],
   controllers: [],
