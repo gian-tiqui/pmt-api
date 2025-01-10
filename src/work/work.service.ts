@@ -65,9 +65,19 @@ export class WorkService {
         },
       });
 
-      await this.cacheManager.reset();
+      if (this.workCacheKeys.length > 0) {
+        try {
+          await Promise.all(
+            this.workCacheKeys.map((key) => this.cacheManager.del(key)),
+          );
 
-      this.logger.debug('Cache cleared');
+          this.workCacheKeys = [];
+
+          this.logger.verbose('Work find all cache cleared.');
+        } catch (error) {
+          handleErrors(error, this.logger);
+        }
+      }
 
       return {
         message: 'Work created successfully',
@@ -93,14 +103,12 @@ export class WorkService {
     };
 
     try {
-      let works;
-      let count;
+      let works, count;
       const cachedWorks: { works: Work[]; count: number } =
         await this.cacheManager.get(worksCacheKey);
 
       if (cachedWorks) {
         this.logger.debug('Works cache hit.');
-
         works = cachedWorks.works;
         count = cachedWorks.count;
       } else {
@@ -148,19 +156,21 @@ export class WorkService {
 
   async findWork(workId: number) {
     let work;
-    const workCacheKey = JSON.stringify(`work-${workId}`);
-    const cachedWork = await this.cacheManager.get(workCacheKey);
+    const findWorkCacheKey = JSON.stringify(`${this.namespace}${workId}`);
+    const cachedWork = await this.cacheManager.get(findWorkCacheKey);
     try {
       if (cachedWork) {
-        this.logger.debug('Cache hit.');
+        this.logger.debug('Work cache hit.');
 
         work = cachedWork;
       } else {
-        this.logger.debug('Cache missed.');
+        this.logger.debug('Work cache missed.');
 
         work = await this.prismaService.work.findFirst({
           where: { id: workId },
         });
+
+        await this.cacheManager.set(findWorkCacheKey, work);
       }
 
       if (!work)
@@ -179,7 +189,7 @@ export class WorkService {
     const { offset, limit, search, type, sortBy, sortOrder, dateWithin } =
       query;
     const orderBy = sortBy ? { [sortBy]: sortOrder || 'asc' } : undefined;
-    const workTasksCacheKey = JSON.stringify(query);
+    const findWorkTasksCacheKey = `${this.namespace}work:${workId}-${JSON.stringify(query)}`;
 
     try {
       const work = await this.prismaService.work.findFirst({
@@ -189,11 +199,10 @@ export class WorkService {
       if (!work)
         throw new NotFoundException(`Work with the id ${workId} not found`);
 
-      let tasks;
-      let count;
+      let tasks, count;
 
       const cachedTasks: { tasks: Task[]; count: number } =
-        await this.cacheManager.get(workTasksCacheKey);
+        await this.cacheManager.get(findWorkTasksCacheKey);
 
       if (cachedTasks) {
         this.logger.debug('Cache hit.');
@@ -245,7 +254,7 @@ export class WorkService {
         });
       }
 
-      await this.cacheManager.set(workTasksCacheKey, { tasks, count });
+      await this.cacheManager.set(findWorkTasksCacheKey, { tasks, count });
 
       return {
         message: 'Work tasks loaded successfully',
@@ -259,6 +268,7 @@ export class WorkService {
 
   async findWorkTask(workId: number, taskId: number) {
     const workTaskCacheKey = `work-${workId}-task-${taskId}`;
+
     try {
       let task;
       const cachedWorkTask = await this.cacheManager.get(workTaskCacheKey);

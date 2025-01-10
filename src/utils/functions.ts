@@ -134,7 +134,16 @@ const validateWorkDepth = (work: Work, task: Task[]) => {};
 
 const validateTaskDepth = (task: Task, subTasks: Task[]) => {};
 
+const generateCacheKey = (
+  namespace: string,
+  identifier: string | number,
+  query?: object,
+): string => {
+  return `${namespace}${identifier}${query ? `-${JSON.stringify(query)}` : ''}`;
+};
+
 export {
+  generateCacheKey,
   getPreviousValues,
   handleErrors,
   firstDateGreaterThanSecondDate,

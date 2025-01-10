@@ -201,7 +201,7 @@ export class ProjectService {
     const { offset, limit, search, type, sortBy, sortOrder, dateWithin } =
       query;
     const orderBy = sortBy ? { [sortBy]: sortOrder || 'asc' } : undefined;
-    const findProjectWorksCacheKey = `${this.namespace}project:${projectId}-${query}`;
+    const findProjectWorksCacheKey = `${this.namespace}project:${projectId}-${JSON.stringify(query)}`;
 
     try {
       const project = await this.prismaService.project.findFirst({

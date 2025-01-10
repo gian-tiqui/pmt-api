@@ -24,7 +24,7 @@ model Division {
   users        User[]
   deptDivision DepartmentDivision[]
   createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
+  updatedAt    DateTime    @updatedAt 
 }
 
 model DepartmentDivision {
