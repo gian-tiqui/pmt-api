@@ -89,7 +89,7 @@ export class CommentController {
   @Delete(':commentId')
   removeComment(
     @Param('commentId', ParseIntPipe) commentId: number,
-    @Query('userId') userId: number,
+    @Query('userId', ParseIntPipe) userId: number,
   ) {
     return this.commentService.removeComment(commentId, userId);
   }

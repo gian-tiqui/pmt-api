@@ -25,6 +25,7 @@ enum LogType {
 
 enum CacheConfig {
   TTL = 1000000000,
+  MAX = 500,
 }
 
 export { LogMethod, PaginationDefault, Status, LogType, CacheConfig };

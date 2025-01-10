@@ -18,7 +18,7 @@ import { CacheConfig } from './utils/enums';
   imports: [
     CacheModule.register({
       ttl: CacheConfig.TTL,
-      max: 500,
+      max: CacheConfig.MAX,
       isGlobal: true,
     }),
     RateLimiterModule,

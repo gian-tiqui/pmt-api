@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  Inject,
   Injectable,
   Logger,
   NotFoundException,
@@ -16,12 +17,18 @@ import {
 import { PrismaService } from 'src/prisma/prisma.service';
 import { FindAllDto } from 'src/project/dto/find-all.dto';
 import { LogMethod, LogType, PaginationDefault } from 'src/utils/enums';
+import { Cache } from 'cache-manager';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Task } from '@prisma/client';
 
 @Injectable()
 export class TaskService {
   private logger = new Logger('TaskService');
 
-  constructor(private readonly prismaService: PrismaService) {}
+  constructor(
+    private readonly prismaService: PrismaService,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
+  ) {}
 
   async createTask(createTaskDto: CreateTaskDto) {
     try {
@@ -66,6 +73,10 @@ export class TaskService {
 
       validateParentAndChildDates(createTaskDto, work, 'task', 'work');
 
+      await this.cacheManager.reset();
+
+      this.logger.log('Cache cleared.');
+
       await this.prismaService.task.create({
         data: {
           ...createTaskDto,
@@ -81,6 +92,7 @@ export class TaskService {
   }
 
   async findTasks(query: FindAllDto) {
+    const tasksQueryKey = JSON.stringify(query);
     const {
       limit,
       offset,
@@ -105,32 +117,43 @@ export class TaskService {
     };
 
     try {
-      const tasks = await this.prismaService.task.findMany({
-        where: {
-          ...(search && {
-            OR: [
-              { title: { contains: search, mode: 'insensitive' } },
-              { description: { contains: search, mode: 'insensitive' } },
-            ],
-          }),
-          ...options,
-        },
-        orderBy,
-        skip: offset || PaginationDefault.OFFSET,
-        take: limit || PaginationDefault.LIMIT,
-      });
+      let tasks;
+      let count;
 
-      const count = await this.prismaService.task.count({
-        where: {
-          ...(search && {
-            OR: [
-              { title: { contains: search, mode: 'insensitive' } },
-              { description: { contains: search, mode: 'insensitive' } },
-            ],
-          }),
-          ...options,
-        },
-      });
+      const cachedTasks: { tasks: Task[]; count: number } =
+        await this.cacheManager.get(tasksQueryKey);
+
+      if (cachedTasks) {
+        tasks = cachedTasks.tasks;
+        count = cachedTasks.count;
+      } else {
+        tasks = await this.prismaService.task.findMany({
+          where: {
+            ...(search && {
+              OR: [
+                { title: { contains: search, mode: 'insensitive' } },
+                { description: { contains: search, mode: 'insensitive' } },
+              ],
+            }),
+            ...options,
+          },
+          orderBy,
+          skip: offset || PaginationDefault.OFFSET,
+          take: limit || PaginationDefault.LIMIT,
+        });
+
+        count = await this.prismaService.task.count({
+          where: {
+            ...(search && {
+              OR: [
+                { title: { contains: search, mode: 'insensitive' } },
+                { description: { contains: search, mode: 'insensitive' } },
+              ],
+            }),
+            ...options,
+          },
+        });
+      }
 
       return {
         message: 'Tasks loaded successfully.',
@@ -420,6 +443,10 @@ export class TaskService {
           `There was a problem in creating the log.`,
         );
 
+      await this.cacheManager.reset();
+
+      this.logger.log('Cache cleared.');
+
       return { message: 'Work updated successfully' };
     } catch (error) {
       handleErrors(error, this.logger);
@@ -448,6 +475,10 @@ export class TaskService {
         throw new BadRequestException(`There was a problem in creatinga log`);
 
       await this.prismaService.task.delete({ where: { id: taskId } });
+
+      await this.cacheManager.reset();
+
+      this.logger.log('Cache cleared.');
 
       return { message: 'Task deleted successfully.' };
     } catch (error) {
