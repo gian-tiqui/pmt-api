@@ -28,4 +28,30 @@ enum CacheConfig {
   MAX = 500,
 }
 
-export { LogMethod, PaginationDefault, Status, LogType, CacheConfig };
+enum Identifier {
+  PROJECT = 'single-project',
+  WORK = 'single-work',
+  TASK = 'single-task',
+  SUBTASK = 'single-subtask',
+  COMMENT = 'single-comment',
+  DEPARTMENT = 'single-department',
+  DIVISION = 'single-division',
+  MENTION = 'single-mention',
+  USER = 'single-user',
+  DEADLINE_EXTENSIONS = 'single-deadline-extensions',
+  LOG = 'single-log',
+}
+
+enum Namespace {
+  GENERAL = 'GENERAL:',
+}
+
+export {
+  Namespace,
+  LogMethod,
+  PaginationDefault,
+  Status,
+  LogType,
+  CacheConfig,
+  Identifier,
+};

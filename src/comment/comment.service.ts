@@ -8,7 +8,7 @@ import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
 import { FindAllDto } from 'src/project/dto/find-all.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { handleErrors } from 'src/utils/functions';
+import { generateCacheKey, handleErrors } from 'src/utils/functions';
 import { LogMethod, LogType, PaginationDefault } from 'src/utils/enums';
 import { Inject } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
@@ -41,8 +41,14 @@ export class CommentService {
 
       let convertedMentions: { userId: number }[];
 
-      if (mentions)
-        convertedMentions = mentions.split(',').map((id) => ({ userId: +id }));
+      if (mentions) {
+        convertedMentions = mentions.split(',').map((id) => {
+          const parsedId = parseInt(id, 10);
+          if (isNaN(parsedId))
+            throw new BadRequestException(`Invalid mention ID: ${id}`);
+          return { userId: parsedId };
+        });
+      }
 
       const newComment = await this.prismaService.comment.create({
         data: {
@@ -85,7 +91,11 @@ export class CommentService {
   async findComments(query: FindAllDto) {
     const { search, offset, limit, sortOrder, sortBy } = query;
     const orderBy = sortBy ? { [sortBy]: sortOrder || 'asc' } : undefined;
-    const findCommentsCacheKey = `${this.namespace}${JSON.stringify(query)}`;
+    const findCommentsCacheKey = generateCacheKey(
+      this.namespace,
+      'findComments',
+      query,
+    );
     try {
       let comments, count;
       const cachedComments: { comments: Comment[]; count: number } =
@@ -133,7 +143,10 @@ export class CommentService {
   }
 
   async findComment(commentId: number) {
-    const findCommentCacheKey = `${this.namespace}${commentId}`;
+    const findCommentCacheKey = generateCacheKey(
+      this.namespace,
+      `findComment-${commentId}`,
+    );
     try {
       let comment: Comment;
 
@@ -269,16 +282,21 @@ export class CommentService {
 
       let convertedMentions: { userId: number }[];
 
-      if (mentions)
-        convertedMentions =
-          mentions.split(',').map((id) => ({ userId: +id })) || undefined;
+      if (mentions) {
+        convertedMentions = mentions.split(',').map((id) => {
+          const parsedId = parseInt(id, 10);
+          if (isNaN(parsedId))
+            throw new BadRequestException(`Invalid mention ID: ${id}`);
+          return { userId: parsedId };
+        });
+      }
 
       await this.prismaService.comment.update({
         where: { id: commentId, userId },
         data: { mentions: { create: convertedMentions }, ...updateData },
       });
 
-      const updateCommentCacheKey = `comment-${comment.id}`;
+      const updateCommentCacheKey = `${this.namespace}${comment.id}`;
 
       await this.cacheManager.set(updateCommentCacheKey, {
         ...comment,
@@ -320,7 +338,7 @@ export class CommentService {
         where: { id: commentId, userId },
       });
 
-      const deleteCommentCacheKey = `comment-${comment.id}`;
+      const deleteCommentCacheKey = `${this.namespace}${comment.id}`;
 
       await this.cacheManager.del(deleteCommentCacheKey);
 

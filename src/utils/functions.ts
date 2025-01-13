@@ -11,6 +11,7 @@ import { UpdateWorkDto } from 'src/work/dto/update-work.dto';
 import { CreateTaskDto } from 'src/task/dto/create-task.dto';
 import { UpdateTaskDto } from 'src/task/dto/update-task.dto';
 import { PaginationDefault } from './enums';
+import { Cache } from '@nestjs/cache-manager';
 
 const getPreviousValues = (original, updates) => {
   const changes = {};
@@ -134,7 +135,36 @@ const validateWorkDepth = (work: Work, task: Task[]) => {};
 
 const validateTaskDepth = (task: Task, subTasks: Task[]) => {};
 
+const generateCacheKey = (
+  namespace: string,
+  identifier: string | number,
+  query?: object,
+): string => {
+  return `${namespace}${identifier}${query ? `-${JSON.stringify(query)}` : ''}`;
+};
+
+const clearKeys = async (
+  keys: string[],
+  cacheManager: Cache,
+  logger: Logger,
+  identifier: string,
+) => {
+  if (keys.length > 0) {
+    try {
+      await Promise.all(keys.map((key) => cacheManager.del(key)));
+
+      keys = [];
+
+      logger.verbose(`${identifier} find all cache cleared.`);
+    } catch (error) {
+      handleErrors(error, logger);
+    }
+  }
+};
+
 export {
+  clearKeys,
+  generateCacheKey,
   getPreviousValues,
   handleErrors,
   firstDateGreaterThanSecondDate,

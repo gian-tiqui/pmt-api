@@ -14,15 +14,32 @@ import {
   handleErrors,
   firstDateGreaterThanSecondDate,
   validateProjectDepth,
+  generateCacheKey,
+  clearKeys,
 } from 'src/utils/functions';
-import { LogMethod, LogType, PaginationDefault } from 'src/utils/enums';
+import {
+  Identifier,
+  LogMethod,
+  LogType,
+  Namespace,
+  PaginationDefault,
+} from 'src/utils/enums';
 import { Cache } from 'cache-manager';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import { Project, Work } from '@prisma/client';
+import { Project, User, Work } from '@prisma/client';
+import {
+  CreateProject,
+  FindProject,
+  FindProjects,
+  FindProjectWork,
+  FindProjectWorks,
+  RemoveProject,
+  UpdateProject,
+} from 'src/types/types';
 
 @Injectable()
 export class ProjectService {
-  private logger = new Logger('ProjectService');
+  private logger: Logger = new Logger('ProjectService');
   private namespace: string = 'PROJECT:';
   private projectCacheKeys: string[] = [];
 
@@ -31,7 +48,9 @@ export class ProjectService {
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
-  async createProject(createProjectDto: CreateProjectDto) {
+  async createProject(
+    createProjectDto: CreateProjectDto,
+  ): Promise<CreateProject> {
     try {
       firstDateGreaterThanSecondDate(
         createProjectDto.startDate,
@@ -39,7 +58,7 @@ export class ProjectService {
         'Project',
       );
 
-      const user = await this.prismaService.user.findFirst({
+      const user: User = await this.prismaService.user.findFirst({
         where: { id: createProjectDto.authorId },
       });
 
@@ -58,19 +77,12 @@ export class ProjectService {
         },
       });
 
-      if (this.projectCacheKeys.length > 0) {
-        try {
-          await Promise.all(
-            this.projectCacheKeys.map((key) => this.cacheManager.del(key)),
-          );
-
-          this.projectCacheKeys = [];
-
-          this.logger.verbose('Projects find all cache cleared.');
-        } catch (error) {
-          handleErrors(error, this.logger);
-        }
-      }
+      clearKeys(
+        this.projectCacheKeys,
+        this.cacheManager,
+        this.logger,
+        'Projects',
+      );
 
       return { message: 'Project created successfully.' };
     } catch (error) {
@@ -78,7 +90,7 @@ export class ProjectService {
     }
   }
 
-  async findProjects(query: FindAllDto) {
+  async findProjects(query: FindAllDto): Promise<FindProjects> {
     const {
       status,
       authorId,
@@ -89,10 +101,15 @@ export class ProjectService {
       sortOrder,
       dateWithin,
     } = query;
-    const findProjectsCacheKey = `${this.namespace}${JSON.stringify(query)}`;
+
+    const findProjectsCacheKey: string = generateCacheKey(
+      this.namespace,
+      'findProjects',
+      query,
+    );
 
     try {
-      let projects, count;
+      let projects: Project[], count: number;
       const cachedProjects: { projects: Project[]; count: number } =
         await this.cacheManager.get(findProjectsCacheKey);
 
@@ -166,11 +183,19 @@ export class ProjectService {
     }
   }
 
-  async findProject(projectId: number) {
+  async findProject(projectId: number): Promise<FindProject> {
     try {
-      let project;
-      const findProjectKey = `${this.namespace}${projectId}`;
-      const cachedProject = await this.cacheManager.get(findProjectKey);
+      let project: Project;
+      const findProjectKey: string = generateCacheKey(
+        Namespace.GENERAL,
+        Identifier.PROJECT,
+        {
+          projectId,
+        },
+      );
+
+      const cachedProject: Project =
+        await this.cacheManager.get(findProjectKey);
 
       if (cachedProject) {
         this.logger.debug(`Project cache hit.`);
@@ -182,13 +207,13 @@ export class ProjectService {
           include: { author: { select: { firstName: true, lastName: true } } },
         });
 
-        await this.cacheManager.set(findProjectKey, project);
-      }
+        if (!project) {
+          throw new NotFoundException(
+            `Project with the id ${projectId} not found.`,
+          );
+        }
 
-      if (!project) {
-        throw new NotFoundException(
-          `Project with the id ${projectId} not found.`,
-        );
+        await this.cacheManager.set(findProjectKey, project);
       }
 
       return { message: 'Project loaded successfully.', project };
@@ -197,11 +222,20 @@ export class ProjectService {
     }
   }
 
-  async findProjectWorks(projectId: number, query: FindAllDto) {
+  async findProjectWorks(
+    projectId: number,
+    query: FindAllDto,
+  ): Promise<FindProjectWorks> {
     const { offset, limit, search, type, sortBy, sortOrder, dateWithin } =
       query;
-    const orderBy = sortBy ? { [sortBy]: sortOrder || 'asc' } : undefined;
-    const findProjectWorksCacheKey = `${this.namespace}project:${projectId}-${query}`;
+    const orderBy: object = sortBy
+      ? { [sortBy]: sortOrder || 'asc' }
+      : undefined;
+    const findProjectWorksCacheKey: string = generateCacheKey(
+      this.namespace,
+      'findProjectWorks',
+      { ...query, projectId },
+    );
 
     try {
       const project = await this.prismaService.project.findFirst({
@@ -279,12 +313,19 @@ export class ProjectService {
     }
   }
 
-  async findProjectWork(projectId: number, workId: number) {
-    const findProjectWorkCacheKey = `${this.namespace}project-${projectId}work-${workId}`;
+  async findProjectWork(
+    projectId: number,
+    workId: number,
+  ): Promise<FindProjectWork> {
+    const findProjectWorkCacheKey = generateCacheKey(
+      Namespace.GENERAL,
+      Identifier.WORK,
+      { workId },
+    );
 
     try {
-      let work;
-      const cachedProjectWork = await this.cacheManager.get(
+      let work: Work;
+      const cachedProjectWork: Work = await this.cacheManager.get(
         findProjectWorkCacheKey,
       );
 
@@ -319,9 +360,31 @@ export class ProjectService {
     }
   }
 
-  async updateProject(projectId: number, updateProjectDto: UpdateProjectDto) {
+  async updateProject(
+    projectId: number,
+    updateProjectDto: UpdateProjectDto,
+  ): Promise<UpdateProject> {
     try {
       const { userId, ...updateData } = updateProjectDto;
+
+      const [_project, user] = await Promise.all([
+        this.prismaService.project.findFirst({
+          where: { id: projectId },
+          include: {
+            works: { include: { tasks: { include: { subtasks: true } } } },
+            author: { select: { firstName: true, lastName: true } },
+          },
+        }),
+        this.prismaService.user.findFirst({ where: { id: userId } }),
+      ]);
+
+      if (!_project)
+        throw new NotFoundException(
+          `Project with the id ${projectId} not found.`,
+        );
+
+      if (!user)
+        throw new NotFoundException(`User with the id ${projectId} not found.`);
 
       firstDateGreaterThanSecondDate(
         updateData.startDate,
@@ -329,29 +392,9 @@ export class ProjectService {
         'Project',
       );
 
-      const _project = await this.prismaService.project.findFirst({
-        where: { id: projectId },
-        include: {
-          works: { include: { tasks: { include: { subtasks: true } } } },
-          author: { select: { firstName: true, lastName: true } },
-        },
-      });
-
       const { works, ...project } = _project;
 
       validateProjectDepth(project, works);
-
-      if (!project)
-        throw new NotFoundException(
-          `Project with the id ${projectId} not found.`,
-        );
-
-      const user = await this.prismaService.user.findFirst({
-        where: { id: userId },
-      });
-
-      if (!user)
-        throw new NotFoundException(`User with the id ${projectId} not found.`);
 
       const updatedProject = await this.prismaService.project.update({
         where: { id: projectId },
@@ -377,7 +420,13 @@ export class ProjectService {
           'There was a problem in creating a log for the project',
         );
 
-      const updateProjectCacheKey = `${this.namespace}${projectId}`;
+      const updateProjectCacheKey = generateCacheKey(
+        Namespace.GENERAL,
+        Identifier.PROJECT,
+        {
+          projectId,
+        },
+      );
 
       await this.cacheManager.set(updateProjectCacheKey, {
         ...project,
@@ -390,7 +439,10 @@ export class ProjectService {
     }
   }
 
-  async removeProject(projectId: number, userId: number) {
+  async removeProject(
+    projectId: number,
+    userId: number,
+  ): Promise<RemoveProject> {
     try {
       const user = await this.prismaService.user.findFirst({
         where: { id: userId },
@@ -431,7 +483,13 @@ export class ProjectService {
           'There was a problem in creating the log.',
         );
 
-      const deleteProjectCacheKey = `${this.namespace}${projectId}`;
+      const deleteProjectCacheKey = generateCacheKey(
+        Namespace.GENERAL,
+        Identifier.PROJECT,
+        {
+          projectId,
+        },
+      );
 
       await this.cacheManager.del(deleteProjectCacheKey);
 
