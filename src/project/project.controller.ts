@@ -14,6 +14,15 @@ import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { FindAllDto } from './dto/find-all.dto';
 import { RateLimit } from 'nestjs-rate-limiter';
+import {
+  CreateProject,
+  FindProject,
+  FindProjects,
+  FindProjectWork,
+  FindProjectWorks,
+  RemoveProject,
+  UpdateProject,
+} from 'src/types/types';
 
 @Controller('project')
 export class ProjectController {
@@ -26,7 +35,9 @@ export class ProjectController {
     errorMessage: 'Please wait before creating a new project.',
   })
   @Post()
-  createProject(@Body() createProjectDto: CreateProjectDto) {
+  createProject(
+    @Body() createProjectDto: CreateProjectDto,
+  ): Promise<CreateProject> {
     return this.projectService.createProject(createProjectDto);
   }
 
@@ -37,7 +48,7 @@ export class ProjectController {
     errorMessage: 'Please wait before loading the projects.',
   })
   @Get()
-  findProjects(@Query('') query: FindAllDto) {
+  findProjects(@Query('') query: FindAllDto): Promise<FindProjects> {
     return this.projectService.findProjects(query);
   }
 
@@ -48,7 +59,9 @@ export class ProjectController {
     errorMessage: 'Please wait before loading a project.',
   })
   @Get(':projectId')
-  findProject(@Param('projectId', ParseIntPipe) projectId: number) {
+  findProject(
+    @Param('projectId', ParseIntPipe) projectId: number,
+  ): Promise<FindProject> {
     return this.projectService.findProject(projectId);
   }
 
@@ -62,7 +75,7 @@ export class ProjectController {
   findProjectWorks(
     @Param('projectId', ParseIntPipe) projectId: number,
     @Query() query: FindAllDto,
-  ) {
+  ): Promise<FindProjectWorks> {
     return this.projectService.findProjectWorks(projectId, query);
   }
 
@@ -76,7 +89,7 @@ export class ProjectController {
   findProjectWork(
     @Param('projectId', ParseIntPipe) projectId: number,
     @Param('workId', ParseIntPipe) workId: number,
-  ) {
+  ): Promise<FindProjectWork> {
     return this.projectService.findProjectWork(projectId, workId);
   }
 
@@ -90,7 +103,7 @@ export class ProjectController {
   updateProject(
     @Param('projectId', ParseIntPipe) projectId: number,
     @Body() updateProjectDto: UpdateProjectDto,
-  ) {
+  ): Promise<UpdateProject> {
     return this.projectService.updateProject(projectId, updateProjectDto);
   }
 
@@ -104,7 +117,7 @@ export class ProjectController {
   removeProject(
     @Param('projectId', ParseIntPipe) projectId: number,
     @Query('userId', ParseIntPipe) userId: number,
-  ) {
+  ): Promise<RemoveProject> {
     return this.projectService.removeProject(projectId, userId);
   }
 }

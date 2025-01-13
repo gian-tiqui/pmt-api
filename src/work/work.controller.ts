@@ -14,6 +14,15 @@ import { CreateWorkDto } from './dto/create-work.dto';
 import { UpdateWorkDto } from './dto/update-work.dto';
 import { FindAllDto } from 'src/project/dto/find-all.dto';
 import { RateLimit } from 'nestjs-rate-limiter';
+import {
+  CreateWork,
+  FindWork,
+  FindWorks,
+  FindWorkTask,
+  FindWorkTasks,
+  RemoveWork,
+  UpdateWork,
+} from 'src/types/types';
 
 @Controller('work')
 export class WorkController {
@@ -26,7 +35,7 @@ export class WorkController {
     errorMessage: `Please wait before creating a new work.`,
   })
   @Post()
-  createWork(@Body() createWorkDto: CreateWorkDto) {
+  createWork(@Body() createWorkDto: CreateWorkDto): Promise<CreateWork> {
     return this.workService.createWork(createWorkDto);
   }
 
@@ -37,7 +46,7 @@ export class WorkController {
     errorMessage: `Please wait before loading works`,
   })
   @Get()
-  findWorks(@Query() query: FindAllDto) {
+  findWorks(@Query() query: FindAllDto): Promise<FindWorks> {
     return this.workService.findWorks(query);
   }
 
@@ -48,7 +57,7 @@ export class WorkController {
     errorMessage: `Please wait before loading a work.`,
   })
   @Get(':workId')
-  findWork(@Param('workId', ParseIntPipe) workId: number) {
+  findWork(@Param('workId', ParseIntPipe) workId: number): Promise<FindWork> {
     return this.workService.findWork(workId);
   }
 
@@ -59,7 +68,10 @@ export class WorkController {
     errorMessage: `Please wait before loading a work's tasks.`,
   })
   @Get(':workId/task')
-  findWorkTasks(@Param('workId') workId: number, @Query() query: FindAllDto) {
+  findWorkTasks(
+    @Param('workId') workId: number,
+    @Query() query: FindAllDto,
+  ): Promise<FindWorkTasks> {
     return this.workService.findWorkTasks(workId, query);
   }
 
@@ -73,7 +85,7 @@ export class WorkController {
   findWorkTask(
     @Param('workId', ParseIntPipe) workId: number,
     @Param('taskId', ParseIntPipe) taskId: number,
-  ) {
+  ): Promise<FindWorkTask> {
     return this.workService.findWorkTask(workId, taskId);
   }
 
@@ -87,7 +99,7 @@ export class WorkController {
   updateWork(
     @Param('workId', ParseIntPipe) workId: number,
     @Body() updateWorkDto: UpdateWorkDto,
-  ) {
+  ): Promise<UpdateWork> {
     return this.workService.updateWork(workId, updateWorkDto);
   }
 
@@ -101,7 +113,7 @@ export class WorkController {
   removeWork(
     @Param('workId', ParseIntPipe) workId: number,
     @Query('userId', ParseIntPipe) userId: number,
-  ) {
+  ): Promise<RemoveWork> {
     return this.workService.removeWork(workId, userId);
   }
 }
