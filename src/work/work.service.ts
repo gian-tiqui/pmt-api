@@ -9,6 +9,7 @@ import { CreateWorkDto } from './dto/create-work.dto';
 import { UpdateWorkDto } from './dto/update-work.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import {
+  clearKeys,
   firstDateGreaterThanSecondDate,
   generateCacheKey,
   getPreviousValues,
@@ -39,7 +40,7 @@ import {
 @Injectable()
 export class WorkService {
   private logger = new Logger('WorkService');
-  private workCacheKeys: string[] = [];
+  private workCacheKeys: Set<string> = new Set<string>();
   private namespace: string = 'WORK:';
 
   constructor(
@@ -55,18 +56,19 @@ export class WorkService {
         'Work',
       );
 
-      const user = await this.prismaService.user.findFirst({
-        where: { id: createWorkDto.authorId },
-      });
+      const [user, project] = await Promise.all([
+        this.prismaService.user.findFirst({
+          where: { id: createWorkDto.authorId },
+        }),
+        this.prismaService.project.findFirst({
+          where: { id: createWorkDto.projectId },
+        }),
+      ]);
 
       if (!user)
         throw new NotFoundException(
           `User with the id ${createWorkDto.authorId} not found`,
         );
-
-      const project = await this.prismaService.project.findFirst({
-        where: { id: createWorkDto.projectId },
-      });
 
       if (!project)
         throw new NotFoundException(
@@ -81,19 +83,7 @@ export class WorkService {
         },
       });
 
-      if (this.workCacheKeys.length > 0) {
-        try {
-          await Promise.all(
-            this.workCacheKeys.map((key) => this.cacheManager.del(key)),
-          );
-
-          this.workCacheKeys = [];
-
-          this.logger.verbose('Work find all cache cleared.');
-        } catch (error) {
-          handleErrors(error, this.logger);
-        }
-      }
+      clearKeys(this.workCacheKeys, this.cacheManager, this.logger, 'Work');
 
       return {
         message: 'Work created successfully',
@@ -108,15 +98,6 @@ export class WorkService {
       query;
     const worksCacheKey = generateCacheKey(this.namespace, 'findWorks', query);
     const orderBy = sortBy ? { [sortBy]: sortOrder || 'asc' } : undefined;
-    const options = {
-      ...(dateWithin && {
-        AND: [
-          { startDate: { gte: dateWithin } },
-          { endDate: { lte: dateWithin } },
-        ],
-      }),
-      ...(type && { type }),
-    };
 
     try {
       let works: Work[], count: number;
@@ -130,35 +111,37 @@ export class WorkService {
       } else {
         this.logger.debug('Works cache missed.');
 
+        const where: object = {
+          ...(dateWithin && {
+            AND: [
+              { startDate: { gte: dateWithin } },
+              { endDate: { lte: dateWithin } },
+            ],
+          }),
+          ...(type && { type }),
+          ...(search && {
+            OR: [
+              { name: { contains: search, mode: 'insensitive' } },
+              { description: { contains: search, mode: 'insensitive' } },
+            ],
+          }),
+        };
+
         works = await this.prismaService.work.findMany({
-          where: {
-            ...options,
-            ...(search && {
-              OR: [
-                { name: { contains: search, mode: 'insensitive' } },
-                { description: { contains: search, mode: 'insensitive' } },
-              ],
-            }),
-          },
+          where,
           orderBy,
           skip: offset || PaginationDefault.OFFSET,
           take: limit || PaginationDefault.LIMIT,
         });
 
         count = await this.prismaService.work.count({
-          where: {
-            ...options,
-            ...(search && {
-              OR: [
-                { name: { contains: search, mode: 'insensitive' } },
-                { description: { contains: search, mode: 'insensitive' } },
-              ],
-            }),
-          },
+          where,
         });
-      }
 
-      await this.cacheManager.set(worksCacheKey, { works, count });
+        await this.cacheManager.set(worksCacheKey, { works, count });
+
+        this.workCacheKeys.add(worksCacheKey);
+      }
 
       return {
         message: 'Works loaded successfully',
@@ -179,8 +162,8 @@ export class WorkService {
         workId,
       },
     );
-
     const cachedWork: Work = await this.cacheManager.get(findWorkCacheKey);
+
     try {
       if (cachedWork) {
         this.logger.debug('Work cache hit.');
@@ -215,7 +198,11 @@ export class WorkService {
     const { offset, limit, search, type, sortBy, sortOrder, dateWithin } =
       query;
     const orderBy = sortBy ? { [sortBy]: sortOrder || 'asc' } : undefined;
-    const findWorkTasksCacheKey = `${this.namespace}work:${workId}-${JSON.stringify(query)}`;
+    const findWorkTasksCacheKey = generateCacheKey(
+      this.namespace,
+      'findWorkTasks',
+      query,
+    );
 
     try {
       const work: Work = await this.prismaService.work.findFirst({
@@ -238,49 +225,38 @@ export class WorkService {
       } else {
         this.logger.debug('Cache missed.');
 
+        const where: object = {
+          workId,
+          ...(type && { type: { mode: 'insensitive', equals: type } }),
+          ...(search && {
+            OR: [
+              { title: { contains: search, mode: 'insensitive' } },
+              { description: { contains: search, mode: 'insensitive' } },
+            ],
+          }),
+          ...(dateWithin && {
+            AND: [
+              { startDate: { gte: dateWithin } },
+              { endDate: { lte: dateWithin } },
+            ],
+          }),
+        };
+
         tasks = await this.prismaService.task.findMany({
-          where: {
-            workId,
-            ...(type && { type: { mode: 'insensitive', equals: type } }),
-            ...(search && {
-              OR: [
-                { title: { contains: search, mode: 'insensitive' } },
-                { description: { contains: search, mode: 'insensitive' } },
-              ],
-            }),
-            ...(dateWithin && {
-              AND: [
-                { startDate: { gte: dateWithin } },
-                { endDate: { lte: dateWithin } },
-              ],
-            }),
-          },
+          where,
           skip: offset || PaginationDefault.OFFSET,
           take: limit || PaginationDefault.LIMIT,
           orderBy,
         });
 
         count = await this.prismaService.task.count({
-          where: {
-            workId,
-            ...(type && { type: { mode: 'insensitive', equals: type } }),
-            ...(search && {
-              OR: [
-                { title: { contains: search, mode: 'insensitive' } },
-                { description: { contains: search, mode: 'insensitive' } },
-              ],
-            }),
-            ...(dateWithin && {
-              AND: [
-                { startDate: { gte: dateWithin } },
-                { endDate: { lte: dateWithin } },
-              ],
-            }),
-          },
+          where,
         });
-      }
 
-      await this.cacheManager.set(findWorkTasksCacheKey, { tasks, count });
+        await this.cacheManager.set(findWorkTasksCacheKey, { tasks, count });
+
+        this.workCacheKeys.add(findWorkTasksCacheKey);
+      }
 
       return {
         message: 'Work tasks loaded successfully',
@@ -293,7 +269,11 @@ export class WorkService {
   }
 
   async findWorkTask(workId: number, taskId: number): Promise<FindWorkTask> {
-    const workTaskCacheKey = `work-${workId}-task-${taskId}`;
+    const workTaskCacheKey = generateCacheKey(
+      Namespace.GENERAL,
+      Identifier.TASK,
+      { taskId },
+    );
 
     try {
       let task: Task;
@@ -301,15 +281,17 @@ export class WorkService {
         await this.cacheManager.get(workTaskCacheKey);
 
       if (cachedWorkTask) {
-        this.logger.log('Cache hit.');
+        this.logger.debug('Cache hit.');
 
         task = cachedWorkTask;
       } else {
-        this.logger.log('Cache missed.');
+        this.logger.debug('Cache missed.');
 
         task = await this.prismaService.task.findFirst({
           where: { id: taskId, workId },
         });
+
+        await this.cacheManager.set(workTaskCacheKey, task);
       }
 
       if (!task)
@@ -366,30 +348,31 @@ export class WorkService {
 
       validateParentAndChildDates(updateWorkDto, project, 'work', 'project');
 
-      const updatedWork = await this.prismaService.work.update({
-        where: { id: workId },
-        data: {
-          ...updateData,
+      const updatedWork = await this.prismaService.$transaction(
+        async (prisma) => {
+          const work = await prisma.work.update({
+            where: { id: workId },
+            data: {
+              ...updateData,
+            },
+          });
+
+          await this.prismaService.log.create({
+            data: {
+              logs: getPreviousValues(work, updateData),
+              editedBy: editedBy,
+              logMethodId: LogMethod.UPDATE,
+              logTypeId: LogType.WORK,
+            },
+          });
+
+          return work;
         },
-      });
+      );
 
       if (!updatedWork)
         throw new BadRequestException(
           'There was a problem in updating the data',
-        );
-
-      const updatedWorkLog = await this.prismaService.log.create({
-        data: {
-          logs: getPreviousValues(work, updateData),
-          editedBy: editedBy,
-          logMethodId: LogMethod.UPDATE,
-          logTypeId: LogType.WORK,
-        },
-      });
-
-      if (!updatedWorkLog)
-        throw new BadRequestException(
-          `There was a problem in creating the log.`,
         );
 
       const updateWorkCacheKey = generateCacheKey(

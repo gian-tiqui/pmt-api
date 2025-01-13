@@ -14,6 +14,19 @@ import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { FindAllDto } from 'src/project/dto/find-all.dto';
 import { RateLimit } from 'nestjs-rate-limiter';
+import {
+  CreateTask,
+  FindTask,
+  FindTaskComment,
+  FindTaskComments,
+  FindTasks,
+  FindTaskSubtask,
+  FindTaskSubtasks,
+  FindTaskUser,
+  FindTaskUsers,
+  RemoveTask,
+  UpdateTask,
+} from 'src/types/types';
 
 @Controller('task')
 export class TaskController {
@@ -26,7 +39,7 @@ export class TaskController {
     errorMessage: `Please wait before loading a project's works.`,
   })
   @Post()
-  createTask(@Body() createTaskDto: CreateTaskDto) {
+  createTask(@Body() createTaskDto: CreateTaskDto): Promise<CreateTask> {
     return this.taskService.createTask(createTaskDto);
   }
 
@@ -37,7 +50,7 @@ export class TaskController {
     errorMessage: `Please wait before loading a project's works.`,
   })
   @Get()
-  findTasks(@Query() query: FindAllDto) {
+  findTasks(@Query() query: FindAllDto): Promise<FindTasks> {
     return this.taskService.findTasks(query);
   }
 
@@ -48,7 +61,7 @@ export class TaskController {
     errorMessage: `Please wait before loading a project's works.`,
   })
   @Get(':taskId')
-  findTask(@Param('taskId', ParseIntPipe) taskId: number) {
+  findTask(@Param('taskId', ParseIntPipe) taskId: number): Promise<FindTask> {
     return this.taskService.findTask(taskId);
   }
 
@@ -62,7 +75,7 @@ export class TaskController {
   findTaskSubtasks(
     @Param('taskId', ParseIntPipe) taskId: number,
     @Query() query: FindAllDto,
-  ) {
+  ): Promise<FindTaskSubtasks> {
     return this.taskService.findTaskSubtasks(taskId, query);
   }
 
@@ -76,7 +89,7 @@ export class TaskController {
   findTaskSubtask(
     @Param('taskId', ParseIntPipe) taskId: number,
     @Param('subTaskId', ParseIntPipe) subTaskId: number,
-  ) {
+  ): Promise<FindTaskSubtask> {
     return this.taskService.findTaskSubtask(taskId, subTaskId);
   }
 
@@ -90,8 +103,22 @@ export class TaskController {
   findTaskUsers(
     @Param('taskId', ParseIntPipe) taskId: number,
     @Query() query: FindAllDto,
-  ) {
+  ): Promise<FindTaskUsers> {
     return this.taskService.findTaskUsers(taskId, query);
+  }
+
+  @RateLimit({
+    keyPrefix: 'get-task-user',
+    points: 10,
+    duration: 60,
+    errorMessage: `Please wait before loading a task's user.`,
+  })
+  @Get(':taskId/user/:userId')
+  findTaskUser(
+    @Param('taskId', ParseIntPipe) taskId: number,
+    @Param('userId', ParseIntPipe) userId: number,
+  ): Promise<FindTaskUser> {
+    return this.taskService.findTaskUser(taskId, userId);
   }
 
   @RateLimit({
@@ -104,7 +131,7 @@ export class TaskController {
   findTaskComments(
     @Param('taskId', ParseIntPipe) taskId,
     @Query() query: FindAllDto,
-  ) {
+  ): Promise<FindTaskComments> {
     return this.taskService.findTaskComments(taskId, query);
   }
 
@@ -118,7 +145,7 @@ export class TaskController {
   findTaskComment(
     @Param('taskId', ParseIntPipe) taskId: number,
     @Param('commentId', ParseIntPipe) commentId: number,
-  ) {
+  ): Promise<FindTaskComment> {
     return this.taskService.findTaskComment(taskId, commentId);
   }
 
@@ -132,7 +159,7 @@ export class TaskController {
   updateTask(
     @Param('taskId', ParseIntPipe) taskId: number,
     @Body() updateTaskDto: UpdateTaskDto,
-  ) {
+  ): Promise<UpdateTask> {
     return this.taskService.updateTask(taskId, updateTaskDto);
   }
 
@@ -146,7 +173,7 @@ export class TaskController {
   removeTask(
     @Param('taskId', ParseIntPipe) taskId: number,
     @Query('userId', ParseIntPipe) userId: number,
-  ) {
+  ): Promise<RemoveTask> {
     return this.taskService.removeTask(taskId, userId);
   }
 }

@@ -24,8 +24,8 @@ enum LogType {
 }
 
 enum CacheConfig {
-  TTL = 1000000000,
-  MAX = 500,
+  TTL = 1000000,
+  MAX = 100,
 }
 
 enum Identifier {

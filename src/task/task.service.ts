@@ -8,29 +8,53 @@ import {
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import {
+  clearKeys,
   filterUsers,
   firstDateGreaterThanSecondDate,
+  generateCacheKey,
   getPreviousValues,
   handleErrors,
   validateParentAndChildDates,
 } from 'src/utils/functions';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { FindAllDto } from 'src/project/dto/find-all.dto';
-import { LogMethod, LogType, PaginationDefault } from 'src/utils/enums';
+import {
+  Identifier,
+  LogMethod,
+  LogType,
+  Namespace,
+  PaginationDefault,
+} from 'src/utils/enums';
 import { Cache } from 'cache-manager';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import { Task } from '@prisma/client';
+import { Comment, Task } from '@prisma/client';
+import {
+  CreateTask,
+  FindTask,
+  FindTaskComment,
+  FindTaskComments,
+  FindTasks,
+  FindTaskSubtask,
+  FindTaskSubtasks,
+  FindTaskUser,
+  FindTaskUsers,
+  RemoveTask,
+  UpdateTask,
+} from 'src/types/types';
+import { subtle } from 'crypto';
 
 @Injectable()
 export class TaskService {
   private logger = new Logger('TaskService');
+  private namespace: string = 'TASK:';
+  private taskCacheKeys: Set<string> = new Set<string>();
 
   constructor(
     private readonly prismaService: PrismaService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
-  async createTask(createTaskDto: CreateTaskDto) {
+  async createTask(createTaskDto: CreateTaskDto): Promise<CreateTask> {
     try {
       firstDateGreaterThanSecondDate(
         createTaskDto.startDate,
@@ -38,13 +62,23 @@ export class TaskService {
         'Work',
       );
 
-      const user = await this.prismaService.user.findFirst({
-        where: { id: createTaskDto.assignedToId },
-      });
+      const [user, work] = await Promise.all([
+        this.prismaService.user.findFirst({
+          where: { id: createTaskDto.assignedToId },
+        }),
+        this.prismaService.work.findFirst({
+          where: { id: createTaskDto.workId },
+        }),
+      ]);
 
       if (!user)
         throw new NotFoundException(
           `User with the id ${createTaskDto.assignedToId} not found.`,
+        );
+
+      if (!work)
+        throw new NotFoundException(
+          `Work with the id ${createTaskDto.workId} not found.`,
         );
 
       if (createTaskDto.parentId) {
@@ -62,20 +96,9 @@ export class TaskService {
         );
       }
 
-      const work = await this.prismaService.work.findFirst({
-        where: { id: createTaskDto.workId },
-      });
-
-      if (!work)
-        throw new NotFoundException(
-          `Work with the id ${createTaskDto.workId} not found.`,
-        );
-
       validateParentAndChildDates(createTaskDto, work, 'task', 'work');
 
-      await this.cacheManager.reset();
-
-      this.logger.log('Cache cleared.');
+      clearKeys(this.taskCacheKeys, this.cacheManager, this.logger, 'Task');
 
       await this.prismaService.task.create({
         data: {
@@ -91,8 +114,7 @@ export class TaskService {
     }
   }
 
-  async findTasks(query: FindAllDto) {
-    const tasksQueryKey = JSON.stringify(query);
+  async findTasks(query: FindAllDto): Promise<FindTasks> {
     const {
       limit,
       offset,
@@ -104,55 +126,57 @@ export class TaskService {
       type,
     } = query;
     const orderBy = sortBy ? { [sortBy]: sortOrder || 'asc' } : undefined;
-
-    const options = {
-      ...(dateWithin && {
-        AND: [
-          { startDate: { gte: dateWithin } },
-          { endDate: { lte: dateWithin } },
-        ],
-      }),
-      ...(type && { type }),
-      ...(status && { status }),
-    };
+    const findTasksCacheKey = generateCacheKey(
+      this.namespace,
+      'findTasks',
+      query,
+    );
 
     try {
-      let tasks;
-      let count;
+      let tasks: Task[], count: number;
 
       const cachedTasks: { tasks: Task[]; count: number } =
-        await this.cacheManager.get(tasksQueryKey);
+        await this.cacheManager.get(findTasksCacheKey);
 
       if (cachedTasks) {
+        this.logger.debug('Tasks cache hit.');
+
         tasks = cachedTasks.tasks;
         count = cachedTasks.count;
       } else {
+        this.logger.debug('Tasks cache missed.');
+
+        const where: object = {
+          ...(dateWithin && {
+            AND: [
+              { startDate: { gte: dateWithin } },
+              { endDate: { lte: dateWithin } },
+            ],
+          }),
+          ...(type && { type }),
+          ...(status && { status }),
+          ...(search && {
+            OR: [
+              { title: { contains: search, mode: 'insensitive' } },
+              { description: { contains: search, mode: 'insensitive' } },
+            ],
+          }),
+        };
+
         tasks = await this.prismaService.task.findMany({
-          where: {
-            ...(search && {
-              OR: [
-                { title: { contains: search, mode: 'insensitive' } },
-                { description: { contains: search, mode: 'insensitive' } },
-              ],
-            }),
-            ...options,
-          },
+          where,
           orderBy,
           skip: offset || PaginationDefault.OFFSET,
           take: limit || PaginationDefault.LIMIT,
         });
 
         count = await this.prismaService.task.count({
-          where: {
-            ...(search && {
-              OR: [
-                { title: { contains: search, mode: 'insensitive' } },
-                { description: { contains: search, mode: 'insensitive' } },
-              ],
-            }),
-            ...options,
-          },
+          where,
         });
+
+        await this.cacheManager.set(findTasksCacheKey, { tasks, count });
+
+        this.taskCacheKeys.add(findTasksCacheKey);
       }
 
       return {
@@ -165,14 +189,31 @@ export class TaskService {
     }
   }
 
-  async findTask(taskId: number) {
-    try {
-      const task = await this.prismaService.task.findFirst({
-        where: { id: taskId },
-      });
+  async findTask(taskId: number): Promise<FindTask> {
+    const findTaskCacheKey: string = generateCacheKey(
+      this.namespace,
+      Identifier.TASK,
+      { taskId },
+    );
 
-      if (!task)
-        throw new NotFoundException(`Task with the id ${taskId} not found.`);
+    try {
+      let task: Task;
+      const cachedTask: Task = await this.cacheManager.get(findTaskCacheKey);
+
+      if (cachedTask) {
+        this.logger.debug(`Task cache hit.`);
+
+        task = cachedTask;
+      } else {
+        task = await this.prismaService.task.findFirst({
+          where: { id: taskId },
+        });
+
+        if (!task)
+          throw new NotFoundException(`Task with the id ${taskId} not found.`);
+
+        await this.cacheManager.set(findTaskCacheKey, task);
+      }
 
       return {
         message: 'Task loaded successfully.',
@@ -183,7 +224,10 @@ export class TaskService {
     }
   }
 
-  async findTaskSubtasks(taskId: number, query: FindAllDto) {
+  async findTaskSubtasks(
+    taskId: number,
+    query: FindAllDto,
+  ): Promise<FindTaskSubtasks> {
     const {
       limit,
       offset,
@@ -196,17 +240,6 @@ export class TaskService {
     } = query;
     const orderBy = sortBy ? { [sortBy]: sortOrder || 'asc' } : undefined;
 
-    const options = {
-      ...(dateWithin && {
-        AND: [
-          { startDate: { gte: dateWithin } },
-          { endDate: { lte: dateWithin } },
-        ],
-      }),
-      ...(type && { type }),
-      ...(status && { status }),
-    };
-
     try {
       const task = await this.prismaService.task.findFirst({
         where: { id: taskId },
@@ -215,61 +248,110 @@ export class TaskService {
       if (!task)
         throw new NotFoundException(`Task with the id ${taskId} not found.`);
 
-      const tasks = await this.prismaService.task.findMany({
-        where: {
-          ...(search && {
-            OR: [
-              { title: { contains: search, mode: 'insensitive' } },
-              { description: { contains: search, mode: 'insensitive' } },
-            ],
-          }),
-          ...options,
-          parentId: taskId,
-        },
-        orderBy,
-        skip: offset || PaginationDefault.OFFSET,
-        take: limit || PaginationDefault.LIMIT,
-      });
+      let subTasks: Task[], count: number;
 
-      const count = await this.prismaService.task.count({
-        where: {
+      const findTaskSubtasksCacheKey = generateCacheKey(
+        this.namespace,
+        'findTaskSubtasks',
+        query,
+      );
+
+      const cachedTaskSubtasks: { subTasks: Task[]; count: number } =
+        await this.cacheManager.get(findTaskSubtasksCacheKey);
+
+      if (cachedTaskSubtasks) {
+        this.logger.debug('Sub Tasks cache hit.');
+
+        subTasks = cachedTaskSubtasks.subTasks;
+        count = cachedTaskSubtasks.count;
+      } else {
+        this.logger.debug('Sub Tasks cache missed.');
+
+        const where: object = {
+          ...(dateWithin && {
+            AND: [
+              { startDate: { gte: dateWithin } },
+              { endDate: { lte: dateWithin } },
+            ],
+          }),
+          ...(type && { type }),
+          ...(status && { status }),
           ...(search && {
             OR: [
               { title: { contains: search, mode: 'insensitive' } },
               { description: { contains: search, mode: 'insensitive' } },
             ],
           }),
-          ...options,
           parentId: taskId,
-        },
-      });
+        };
+
+        subTasks = await this.prismaService.task.findMany({
+          where,
+          orderBy,
+          skip: offset || PaginationDefault.OFFSET,
+          take: limit || PaginationDefault.LIMIT,
+        });
+
+        count = await this.prismaService.task.count({
+          where,
+        });
+
+        this.cacheManager.set(findTaskSubtasksCacheKey, { subTasks, count });
+
+        this.taskCacheKeys.add(findTaskSubtasksCacheKey);
+      }
 
       return {
         message: 'Subtasks loaded successfully.',
         count,
-        tasks,
+        subTasks,
       };
     } catch (error) {
       handleErrors(error, this.logger);
     }
   }
 
-  async findTaskSubtask(taskId: number, subTaskId: number) {
-    try {
-      const subTask = await this.prismaService.task.findFirst({
-        where: {
-          id: subTaskId,
-          parentId: taskId,
-        },
-      });
+  async findTaskSubtask(
+    taskId: number,
+    subTaskId: number,
+  ): Promise<FindTaskSubtask> {
+    const findTaskSubtaskCacheKey = generateCacheKey(
+      Namespace.GENERAL,
+      Identifier.TASK,
+      { subTaskId },
+    );
 
-      if (!subTask)
-        throw new NotFoundException(
-          `Subtask with the id ${subTaskId} not found in task ${taskId}`,
-        );
+    try {
+      let subTask: Task;
+
+      const cachedSubTask: Task = await this.cacheManager.get(
+        findTaskSubtaskCacheKey,
+      );
+
+      if (cachedSubTask) {
+        this.logger.debug(`Task Sub Task cache hit.`);
+
+        subTask = cachedSubTask;
+      } else {
+        this.logger.debug(`Task Sub Task cache hit.`);
+
+        subTask = await this.prismaService.task.findFirst({
+          where: {
+            id: subTaskId,
+            parentId: taskId,
+          },
+        });
+
+        if (!subTask)
+          throw new NotFoundException(
+            `Subtask with the id ${subTaskId} not found in task ${taskId}`,
+          );
+
+        await this.cacheManager.set(findTaskSubtaskCacheKey, subtle);
+      }
 
       return {
-        message: 'Subtask loaded successfully.',
+        message: 'Sub Task loaded successfully.',
         subTask,
       };
     } catch (error) {
@@ -277,21 +359,41 @@ export class TaskService {
     }
   }
 
-  async findTaskUsers(taskId: number, query: FindAllDto) {
+  async findTaskUsers(
+    taskId: number,
+    query: FindAllDto,
+  ): Promise<FindTaskUsers> {
     const { search, offset, limit, sortBy, sortOrder } = query;
 
     const orderBy = sortBy ? { [sortBy]: sortOrder || 'asc' } : undefined;
 
+    const findTaskUsersCacheKey = generateCacheKey(
+      this.namespace,
+      'findTaskUsers',
+      query,
+    );
+
     try {
-      const task = await this.prismaService.task.findFirst({
-        where: { id: taskId },
-        select: { subtasks: { select: { assignedTo: true } } },
-      });
+      let task;
+
+      const cachedTaskUsers: Task = await this.cacheManager.get(
+        findTaskUsersCacheKey,
+      );
+
+      if (cachedTaskUsers) {
+      } else {
+        task = await this.prismaService.task.findFirst({
+          where: { id: taskId },
+          select: { subtasks: { select: { assignedTo: true } } },
+        });
+
+        if (!task)
+          throw new BadRequestException(
+            `Task with the id ${taskId} not found.`,
+          );
+      }
 
       const users = task.subtasks.map((subtask) => subtask.assignedTo);
-
-      if (!task)
-        throw new BadRequestException(`Task with the id ${taskId} not found.`);
 
       return {
         message: 'Users of the task loaded successfully.',
@@ -303,7 +405,13 @@ export class TaskService {
     }
   }
 
-  async findTaskUser(taskId: number, userId: number) {
+  async findTaskUser(taskId: number, userId: number): Promise<FindTaskUser> {
+    // const findTaskUserCacheKey: string = generateCacheKey(
+    //   Namespace.GENERAL,
+    //   Identifier.USER,
+    //   { userId },
+    // );
+
     try {
       const task = await this.prismaService.task.findFirst({
         where: { id: taskId, assignedToId: userId },
@@ -313,31 +421,69 @@ export class TaskService {
         throw new NotFoundException(
           `User with the id ${userId} is not found in task ${taskId}`,
         );
+
+      return {
+        message: 'User of the task loaded successfully',
+        user: undefined,
+      };
     } catch (error) {
       handleErrors(error, this.logger);
     }
   }
 
-  async findTaskComments(taskId: number, query: FindAllDto) {
+  async findTaskComments(
+    taskId: number,
+    query: FindAllDto,
+  ): Promise<FindTaskComments> {
     const { search, sortBy, sortOrder, offset, limit } = query;
     const orderBy = sortBy ? { [sortBy]: sortOrder || 'asc' } : undefined;
+    const findTaskCommentsCacheKey: string = generateCacheKey(
+      this.namespace,
+      'findTaskComments',
+      query,
+    );
 
     try {
+      let comments: Comment[], count: number;
+
       const task = await this.prismaService.task.findFirst();
 
       if (!task)
         throw new NotFoundException(`Task with the id ${taskId} not found.`);
 
-      const comments = await this.prismaService.comment.findMany({
-        where: { message: { contains: search, mode: 'insensitive' } },
-        orderBy,
-        skip: offset,
-        take: limit,
-      });
+      const cachedComments: { comments: Comment[]; count: number } =
+        await this.cacheManager.get(findTaskCommentsCacheKey);
 
-      const count = await this.prismaService.comment.count({
-        where: { message: { contains: search, mode: 'insensitive' } },
-      });
+      if (cachedComments) {
+        this.logger.debug(`Task Comments cache hit.`);
+
+        comments = cachedComments.comments;
+        count = cachedComments.count;
+      } else {
+        this.logger.debug(`Task comment cache missed.`);
+
+        const where: object = {
+          message: { contains: search, mode: 'insensitive' },
+        };
+
+        comments = await this.prismaService.comment.findMany({
+          where,
+          orderBy,
+          skip: offset,
+          take: limit,
+        });
+
+        count = await this.prismaService.comment.count({
+          where,
+        });
+
+        await this.cacheManager.set(findTaskCommentsCacheKey, {
+          comments,
+          count,
+        });
+
+        this.taskCacheKeys.add(findTaskCommentsCacheKey);
+      }
 
       return {
         message: 'Task comments successfully loaded.',
@@ -349,7 +495,10 @@ export class TaskService {
     }
   }
 
-  async findTaskComment(taskId: number, commentId: number) {
+  async findTaskComment(
+    taskId: number,
+    commentId: number,
+  ): Promise<FindTaskComment> {
     try {
       const comment = await this.prismaService.comment.findFirst({
         where: { id: commentId, taskId },
@@ -369,7 +518,10 @@ export class TaskService {
     }
   }
 
-  async updateTask(taskId: number, updateTaskDto: UpdateTaskDto) {
+  async updateTask(
+    taskId: number,
+    updateTaskDto: UpdateTaskDto,
+  ): Promise<UpdateTask> {
     const { userId, ...updateData } = updateTaskDto;
     try {
       firstDateGreaterThanSecondDate(
@@ -453,7 +605,7 @@ export class TaskService {
     }
   }
 
-  async removeTask(taskId: number, userId: number) {
+  async removeTask(taskId: number, userId: number): Promise<RemoveTask> {
     try {
       const task = await this.prismaService.task.findFirst({
         where: { id: taskId },
