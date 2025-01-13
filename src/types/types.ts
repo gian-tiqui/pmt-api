@@ -1,4 +1,4 @@
-import { Project, Task, Work } from '@prisma/client';
+import { Comment, Project, Task, User, Work } from '@prisma/client';
 
 type CreateBase = {
   message: string;
@@ -68,6 +68,56 @@ type UpdateWork = UpdateBase;
 
 type RemoveWork = RemoveBase;
 
+type CreateTask = CreateBase;
+
+type FindTasks = {
+  message: string;
+  count: number;
+  tasks: Task[];
+};
+
+type FindTask = {
+  message: string;
+  task: Task;
+};
+
+type FindTaskSubtasks = {
+  message: string;
+  count: number;
+  subTasks: Task[];
+};
+
+type FindTaskSubtask = {
+  message: string;
+  subTask: Task;
+};
+
+type FindTaskUsers = {
+  message: string;
+  count: number;
+  users: User[];
+};
+
+type FindTaskUser = {
+  message: string;
+  user: User;
+};
+
+type FindTaskComments = {
+  message: string;
+  count: number;
+  comments: Comment[];
+};
+
+type FindTaskComment = {
+  message: string;
+  comment: Comment;
+};
+
+type UpdateTask = UpdateBase;
+
+type RemoveTask = RemoveBase;
+
 export type {
   CreateProject,
   FindProjects,
@@ -83,4 +133,15 @@ export type {
   FindWorkTask,
   UpdateWork,
   RemoveWork,
+  CreateTask,
+  FindTasks,
+  FindTask,
+  FindTaskSubtasks,
+  FindTaskSubtask,
+  FindTaskUsers,
+  FindTaskUser,
+  FindTaskComments,
+  FindTaskComment,
+  UpdateTask,
+  RemoveTask,
 };

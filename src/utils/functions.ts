@@ -144,16 +144,16 @@ const generateCacheKey = (
 };
 
 const clearKeys = async (
-  keys: string[],
+  keys: Set<string>,
   cacheManager: Cache,
   logger: Logger,
   identifier: string,
 ) => {
-  if (keys.length > 0) {
+  if (keys.size > 0) {
     try {
-      await Promise.all(keys.map((key) => cacheManager.del(key)));
+      await Promise.all(Array.from(keys).map((key) => cacheManager.del(key)));
 
-      keys = [];
+      keys.clear();
 
       logger.verbose(`${identifier} find all cache cleared.`);
     } catch (error) {
