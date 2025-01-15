@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  Inject,
   Injectable,
   Logger,
   NotFoundException,
@@ -7,22 +8,68 @@ import {
 import { CreateDepartmentDto } from './dto/create-department.dto';
 import { UpdateDepartmentDto } from './dto/update-department.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { getPreviousValues, handleErrors } from 'src/utils/functions';
+import {
+  clearKeys,
+  generateCacheKey,
+  getPreviousValues,
+  handleErrors,
+} from 'src/utils/functions';
 import { FindAllDto } from 'src/project/dto/find-all.dto';
-import { LogMethod, LogType, PaginationDefault } from 'src/utils/enums';
+import {
+  Identifier,
+  LogMethod,
+  LogType,
+  Namespace,
+  PaginationDefault,
+} from 'src/utils/enums';
+import { Department, User } from '@prisma/client';
+import { Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
+import {
+  CreateDepartment,
+  FindDepartment,
+  FindDepartments,
+  FindDepartmentUser,
+  FindDepartmentUsers,
+  RemoveDepartment,
+  UpdateDepartment,
+} from 'src/types/types';
 
 @Injectable()
 export class DepartmentService {
   private logger = new Logger('DepartmentService');
-  constructor(private readonly prismaService: PrismaService) {}
+  private namespace: string = 'DEPARTMENT:';
+  private departmentCacheKeys: Set<string> = new Set<string>();
 
-  async createDepartment(createDepartmentDto: CreateDepartmentDto) {
+  constructor(
+    private readonly prismaService: PrismaService,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
+  ) {}
+
+  async createDepartment(
+    createDepartmentDto: CreateDepartmentDto,
+  ): Promise<CreateDepartment> {
     try {
+      const { userId, ...createDepartmentData } = createDepartmentDto;
+
+      const user = await this.prismaService.user.findFirst({
+        where: { id: userId },
+      });
+
+      if (!user)
+        throw new NotFoundException(`User with the id ${userId} not found.`);
+
       await this.prismaService.department.create({
         data: {
-          ...createDepartmentDto,
+          ...createDepartmentData,
         },
       });
+
+      clearKeys(
+        this.departmentCacheKeys,
+        this.cacheManager,
+        this.logger,
+        'Department',
+      );
 
       return { message: 'Department created successfully.' };
     } catch (error) {
@@ -30,36 +77,54 @@ export class DepartmentService {
     }
   }
 
-  async findDepartments(query: FindAllDto) {
+  async findDepartments(query: FindAllDto): Promise<FindDepartments> {
     const { search, offset, limit, sortBy, sortOrder } = query;
+    const orderBy = sortBy ? { [sortBy]: sortOrder || 'asc' } : undefined;
+    const findDepartmentsCacheKey: string = generateCacheKey(
+      this.namespace,
+      'findDepartments',
+      query,
+    );
 
     try {
-      const orderBy = sortBy ? { [sortBy]: sortOrder || 'asc' } : undefined;
+      let departments: Department[], count: number;
 
-      const departments = await this.prismaService.department.findMany({
-        where: {
+      const cachedDepartments: { departments: Department[]; count: number } =
+        await this.cacheManager.get(findDepartmentsCacheKey);
+
+      if (cachedDepartments) {
+        this.logger.debug(`Departments cache hit.`);
+
+        departments = cachedDepartments.departments;
+        count = cachedDepartments.count;
+      } else {
+        const where: object = {
           ...(search && {
             OR: [
               { code: { contains: search, mode: 'insensitive' } },
               { description: { contains: search, mode: 'insensitive' } },
             ],
           }),
-        },
-        orderBy,
-        skip: offset || PaginationDefault.OFFSET,
-        take: limit || PaginationDefault.LIMIT,
-      });
+        };
 
-      const count = await this.prismaService.department.count({
-        where: {
-          ...(search && {
-            OR: [
-              { code: { contains: search, mode: 'insensitive' } },
-              { description: { contains: search, mode: 'insensitive' } },
-            ],
-          }),
-        },
-      });
+        departments = await this.prismaService.department.findMany({
+          where,
+          orderBy,
+          skip: offset || PaginationDefault.OFFSET,
+          take: limit || PaginationDefault.LIMIT,
+        });
+
+        count = await this.prismaService.department.count({
+          where,
+        });
+
+        await this.cacheManager.set(findDepartmentsCacheKey, {
+          departments,
+          count,
+        });
+
+        this.departmentCacheKeys.add(findDepartmentsCacheKey);
+      }
 
       return {
         message: 'Departments loaded successfully',
@@ -71,11 +136,31 @@ export class DepartmentService {
     }
   }
 
-  async findDepartment(deptId: number) {
+  async findDepartment(deptId: number): Promise<FindDepartment> {
     try {
-      const department = await this.prismaService.department.findFirst({
-        where: { id: deptId },
-      });
+      const findDepartmentCacheKey: string = generateCacheKey(
+        Namespace.GENERAL,
+        Identifier.DEPARTMENT,
+        { deptId },
+      );
+      let department: Department;
+      const cachedDepartment: Department = await this.cacheManager.get(
+        findDepartmentCacheKey,
+      );
+
+      if (cachedDepartment) {
+        this.logger.debug(`Department cache hit.`);
+
+        department = cachedDepartment;
+      } else {
+        this.logger.debug(`Department cache missed.`);
+
+        department = await this.prismaService.department.findFirst({
+          where: { id: deptId },
+        });
+
+        await this.cacheManager.set(findDepartmentCacheKey, department);
+      }
 
       if (!department)
         throw new NotFoundException(
@@ -88,10 +173,132 @@ export class DepartmentService {
     }
   }
 
+  async findDepartmentUsers(
+    deptId: number,
+    query: FindAllDto,
+  ): Promise<FindDepartmentUsers> {
+    const {
+      search,
+      departmentId,
+      divisionId,
+      offset,
+      limit,
+      sortBy,
+      sortOrder,
+    } = query;
+
+    try {
+      const department = await this.prismaService.department.findFirst({
+        where: { id: deptId },
+      });
+
+      if (!department)
+        throw new NotFoundException(
+          `Department with the id ${deptId} not found.`,
+        );
+
+      const findDepartmentUsersCacheKey: string = generateCacheKey(
+        this.namespace,
+        'findDepartmentUsers',
+        query,
+      );
+
+      let users: User[], count: number;
+
+      const cachedDepartmentUsers: { users: User[]; count: number } =
+        await this.cacheManager.get(findDepartmentUsersCacheKey);
+
+      if (cachedDepartmentUsers) {
+        this.logger.debug(`Department Users cache hit.`);
+
+        users = cachedDepartmentUsers.users;
+        count = cachedDepartmentUsers.count;
+      } else {
+        this.logger.debug(`Department Users cache missed.`);
+
+        const where: object = {
+          ...(search && {
+            OR: [
+              { firstName: { contains: search, mode: 'insensitive' } },
+              { middleName: { contains: search, mode: 'insensitive' } },
+              { lastName: { contains: search, mode: 'insensitive' } },
+            ],
+          }),
+          ...(departmentId && { departmentId }),
+          ...(divisionId && { divisionId }),
+        };
+        const orderBy = sortBy ? { [sortBy]: sortOrder || 'asc' } : undefined;
+
+        users = await this.prismaService.user.findMany({
+          where,
+          orderBy,
+          skip: offset || PaginationDefault.OFFSET,
+          take: limit || PaginationDefault.LIMIT,
+        });
+        count = await this.prismaService.user.count({ where });
+
+        await this.cacheManager.set(findDepartmentUsersCacheKey, {
+          users,
+          count,
+        });
+
+        this.departmentCacheKeys.add(findDepartmentUsersCacheKey);
+      }
+
+      return {
+        message: `Department's users loaded successfully`,
+        count,
+        users,
+      };
+    } catch (error) {
+      handleErrors(error, this.logger);
+    }
+  }
+
+  async findDepartmentUser(
+    deptId: number,
+    userId: number,
+  ): Promise<FindDepartmentUser> {
+    try {
+      const findDepartmentUserCacheKey: string = generateCacheKey(
+        Namespace.GENERAL,
+        Identifier.USER,
+        { userId },
+      );
+
+      let user: User;
+
+      const departmentUser: User = await this.cacheManager.get(
+        findDepartmentUserCacheKey,
+      );
+
+      if (departmentUser) {
+        this.logger.debug(`Department User cache hit.`);
+
+        user = departmentUser;
+      } else {
+        this.logger.debug(`Department User cache missed.`);
+
+        user = await this.prismaService.user.findFirst({
+          where: { id: userId, departmentId: deptId },
+        });
+
+        await this.cacheManager.set(findDepartmentUserCacheKey, user);
+      }
+
+      return {
+        message: `Department user loaded successfully.`,
+        user,
+      };
+    } catch (error) {
+      handleErrors(error, this.logger);
+    }
+  }
+
   async updateDepartment(
     deptId: number,
     updateDepartmentDto: UpdateDepartmentDto,
-  ) {
+  ): Promise<UpdateDepartment> {
     const { userId, ...updateData } = updateDepartmentDto;
     try {
       const department = await this.prismaService.department.findFirst({
@@ -123,13 +330,27 @@ export class DepartmentService {
       if (!updatedDepartmentLog)
         throw new BadRequestException('There was a problem in creating a log.');
 
-      return { message: 'Department deleted successfully' };
+      const updateDepartmentCacheKey: string = generateCacheKey(
+        Namespace.GENERAL,
+        Identifier.DEPARTMENT,
+        { deptId },
+      );
+
+      await this.cacheManager.set(updateDepartmentCacheKey, {
+        ...department,
+        ...updateData,
+      });
+
+      return { message: 'Department updated successfully' };
     } catch (error) {
       handleErrors(error, this.logger);
     }
   }
 
-  async removeDepartment(deptId: number, userId: number) {
+  async removeDepartment(
+    deptId: number,
+    userId: number,
+  ): Promise<RemoveDepartment> {
     try {
       const department = await this.prismaService.department.findFirst({
         where: { id: deptId },
@@ -153,6 +374,16 @@ export class DepartmentService {
         throw new BadRequestException(`There was a problem in creating a log`);
 
       await this.prismaService.department.delete({ where: { id: deptId } });
+
+      const deleteDepartmentCacheKey = generateCacheKey(
+        Namespace.GENERAL,
+        Identifier.DEPARTMENT,
+        {
+          deptId,
+        },
+      );
+
+      await this.cacheManager.del(deleteDepartmentCacheKey);
 
       return {
         message: 'Department deleted successfully',

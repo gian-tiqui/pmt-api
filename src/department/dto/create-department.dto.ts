@@ -12,4 +12,8 @@ export class CreateDepartmentDto {
   @IsNotEmpty()
   @IsInt()
   divisionId: number;
+
+  @IsNotEmpty()
+  @IsInt()
+  userId: number;
 }
