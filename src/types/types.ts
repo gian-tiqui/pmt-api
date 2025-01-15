@@ -118,6 +118,34 @@ type UpdateTask = UpdateBase;
 
 type RemoveTask = RemoveBase;
 
+type CreateComment = CreateBase;
+
+type FindComments = {
+  message: string;
+  count: number;
+  comments: Comment[];
+};
+
+type FindComment = {
+  message: string;
+  comment: Comment;
+};
+
+type FindCommentMentionedUsers = {
+  message: string;
+  count: number;
+  users: User[];
+};
+
+type FindCommentMentionedUser = {
+  message: string;
+  user: User;
+};
+
+type UpdateComment = UpdateBase;
+
+type RemoveComment = RemoveBase;
+
 export type {
   CreateProject,
   FindProjects,
@@ -144,4 +172,11 @@ export type {
   FindTaskComment,
   UpdateTask,
   RemoveTask,
+  CreateComment,
+  FindComments,
+  FindComment,
+  FindCommentMentionedUsers,
+  FindCommentMentionedUser,
+  UpdateComment,
+  RemoveComment,
 };

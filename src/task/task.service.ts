@@ -14,6 +14,7 @@ import {
   generateCacheKey,
   getPreviousValues,
   handleErrors,
+  sanitizeUser,
   validateParentAndChildDates,
 } from 'src/utils/functions';
 import { PrismaService } from 'src/prisma/prisma.service';
@@ -377,14 +378,14 @@ export class TaskService {
         users: User[],
         count: number;
 
-      const cachedTaskUsers: User[] = await this.cacheManager.get(
-        findTaskUsersCacheKey,
-      );
+      const cachedTaskUsers: { users: User[]; count: number } =
+        await this.cacheManager.get(findTaskUsersCacheKey);
 
       if (cachedTaskUsers) {
         this.logger.debug(`Task Users cache hit.`);
 
-        users = cachedTaskUsers;
+        users = cachedTaskUsers.users;
+        count = cachedTaskUsers.count;
       } else {
         this.logger.debug(`Task Users cache missed.`);
 
@@ -402,6 +403,8 @@ export class TaskService {
           (subtask: Task & { assignedTo: User }) => subtask.assignedTo,
         );
 
+        sanitizeUser(users);
+
         count = task.subtasks.length;
 
         await this.cacheManager.set(findTaskUsersCacheKey, { users, count });
@@ -411,7 +414,7 @@ export class TaskService {
 
       return {
         message: 'Users of the task loaded successfully.',
-        count: count,
+        count,
         users: filterUsers(users, search, offset, limit, orderBy),
       };
     } catch (error) {
@@ -450,6 +453,8 @@ export class TaskService {
         user = await this.prismaService.user.findFirst({
           where: { id: userId },
         });
+
+        sanitizeUser([user]);
 
         await this.cacheManager.set(findTaskUserCacheKey, user);
       }
