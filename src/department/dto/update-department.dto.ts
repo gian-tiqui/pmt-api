@@ -10,6 +10,10 @@ export class UpdateDepartmentDto {
   description?: string;
 
   @IsInt()
+  @IsOptional()
+  divisionId?: number;
+
+  @IsInt()
   @IsNotEmpty()
   userId: number;
 }

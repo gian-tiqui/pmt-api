@@ -52,19 +52,35 @@ const seedEditTypesAndMethod = async () => {
   console.log('Log Method Seeded.');
 };
 
+const seedDivision = async () => {
+  const divisions = [
+    { code: 'ADM', description: 'Admin' },
+    { code: 'NDS', description: 'Nursing Services Department' },
+    { code: 'ANC', description: 'Ancillary' },
+  ];
+
+  for (const division of divisions) {
+    await prismaClient.division.upsert({
+      where: { code: division.code },
+      update: {},
+      create: division,
+    });
+  }
+};
+
 const seedDepartments = async () => {
   const departments = [
-    { description: 'Human Resource', code: 'HR' },
-    { description: 'Quality Management', code: 'QM' },
-    { description: 'Information Technology', code: 'IT' },
-    { description: 'Marketing', code: 'MRKT' },
-    { description: 'Accounting', code: 'ACNT' },
-    { description: 'Ancillary', code: 'ANC' },
-    { description: 'Nursing Services Department', code: 'NSD' },
-    { description: 'Supply Chain', code: 'SC' },
-    { description: 'Support Services', code: 'SSD' },
-    { description: 'Customer Experience', code: 'CED' },
-    { description: 'Executive', code: 'EXEC' },
+    { description: 'Human Resource', code: 'HR', divisionId: 1 },
+    { description: 'Quality Management', code: 'QM', divisionId: 1 },
+    { description: 'Information Technology', code: 'IT', divisionId: 1 },
+    { description: 'Marketing', code: 'MRKT', divisionId: 1 },
+    { description: 'Accounting', code: 'ACNT', divisionId: 1 },
+    { description: 'Ancillary', code: 'ANC', divisionId: 1 },
+    { description: 'Nursing Services Division', code: 'NSD', divisionId: 2 },
+    { description: 'Supply Chain', code: 'SC', divisionId: 1 },
+    { description: 'Support Services', code: 'SSD', divisionId: 1 },
+    { description: 'Customer Experience', code: 'CED', divisionId: 3 },
+    { description: 'Executive', code: 'EXEC', divisionId: 1 },
   ];
 
   for (const department of departments) {
@@ -76,24 +92,6 @@ const seedDepartments = async () => {
   }
 
   console.log('Department seeded.');
-};
-
-const seedDivision = async () => {
-  const divisions = [
-    { description: 'Admin', code: 'adm' },
-    { description: 'Nursing Services', code: 'nsd' },
-    { description: 'Ancillary', code: 'anc' },
-  ];
-
-  for (const division of divisions) {
-    await prismaClient.division.upsert({
-      where: { code: division.code },
-      update: {},
-      create: division,
-    });
-  }
-
-  console.log('Division seeded.');
 };
 
 const seedUsers = async () => {
@@ -323,8 +321,9 @@ const seedProjectsAndWorks = async () => {
 
 const main = async () => {
   seedEditTypesAndMethod();
-  seedDivision();
-  seedDepartments().then(seedUsers).then(seedProjectsAndWorks);
+  seedDivision().then(() =>
+    seedDepartments().then(seedUsers).then(seedProjectsAndWorks),
+  );
 };
 
 main()

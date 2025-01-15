@@ -13,6 +13,7 @@ import {
   filterUsers,
   generateCacheKey,
   handleErrors,
+  sanitizeUser,
 } from 'src/utils/functions';
 import {
   Identifier,
@@ -25,6 +26,15 @@ import { Inject } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import { Comment, User } from '@prisma/client';
+import {
+  CreateComment,
+  FindComment,
+  FindCommentMentionedUser,
+  FindCommentMentionedUsers,
+  FindComments,
+  RemoveComment,
+  UpdateComment,
+} from 'src/types/types';
 
 @Injectable()
 export class CommentService {
@@ -37,7 +47,9 @@ export class CommentService {
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
-  async createComment(createCommentDto: CreateCommentDto) {
+  async createComment(
+    createCommentDto: CreateCommentDto,
+  ): Promise<CreateComment> {
     const { mentions, ...createData } = createCommentDto;
 
     try {
@@ -90,7 +102,7 @@ export class CommentService {
     }
   }
 
-  async findComments(query: FindAllDto) {
+  async findComments(query: FindAllDto): Promise<FindComments> {
     const { search, offset, limit, sortOrder, sortBy } = query;
     const orderBy = sortBy ? { [sortBy]: sortOrder || 'asc' } : undefined;
     const findCommentsCacheKey = generateCacheKey(
@@ -144,7 +156,7 @@ export class CommentService {
     }
   }
 
-  async findComment(commentId: number) {
+  async findComment(commentId: number): Promise<FindComment> {
     const findCommentCacheKey = generateCacheKey(
       Namespace.GENERAL,
       Identifier.COMMENT,
@@ -185,7 +197,10 @@ export class CommentService {
     }
   }
 
-  async findCommentMentionedUsers(commentId: number, query: FindAllDto) {
+  async findCommentMentionedUsers(
+    commentId: number,
+    query: FindAllDto,
+  ): Promise<FindCommentMentionedUsers> {
     const { search, offset, limit, sortBy, sortOrder } = query;
     const findCommentMentionedUsersCacheKey = generateCacheKey(
       this.namespace,
@@ -199,14 +214,14 @@ export class CommentService {
       let comment: Comment & { mentions: { user: User }[] },
         users: User[],
         count: number;
-      const cachedCommentMentionedUsers: Comment & {
-        mentions: { user: User }[];
-      } = await this.cacheManager.get(findCommentMentionedUsersCacheKey);
+      const cachedCommentMentionedUsers: { users: User[]; count: number } =
+        await this.cacheManager.get(findCommentMentionedUsersCacheKey);
 
       if (cachedCommentMentionedUsers) {
         this.logger.debug(`Comment users cache hit.`);
 
-        comment = cachedCommentMentionedUsers;
+        users = cachedCommentMentionedUsers.users;
+        count = cachedCommentMentionedUsers.count;
       } else {
         this.logger.debug(`Comment users cache missed.`);
 
@@ -215,8 +230,15 @@ export class CommentService {
           include: { mentions: { include: { user: true } } },
         })) as Comment & { mentions: { user: User }[] };
 
+        if (!comment)
+          throw new NotFoundException(
+            `Comment with the id ${commentId} not found.`,
+          );
+
         users = [...comment.mentions.map((mention) => mention.user)];
         count = comment.mentions.length;
+
+        sanitizeUser(users);
 
         await this.cacheManager.set(findCommentMentionedUsersCacheKey, {
           users,
@@ -226,14 +248,9 @@ export class CommentService {
         this.commentCacheKeys.add(findCommentMentionedUsersCacheKey);
       }
 
-      if (!comment)
-        throw new NotFoundException(
-          `Comment with the id ${commentId} not found.`,
-        );
-
       return {
         message: 'Mention of the comment retrieved successfully.',
-        count: comment.mentions.length,
+        count,
         users: filterUsers(users, search, offset, limit, orderBy),
       };
     } catch (error) {
@@ -241,7 +258,63 @@ export class CommentService {
     }
   }
 
-  async updateComment(commentId: number, updateCommentDto: UpdateCommentDto) {
+  async findCommentMentionedUser(
+    commentId: number,
+    userId: number,
+  ): Promise<FindCommentMentionedUser> {
+    try {
+      const comment: Comment & { mentions: { user: User }[] } =
+        await this.prismaService.comment.findFirst({
+          where: { id: commentId, mentions: { some: { userId } } },
+          include: { mentions: { include: { user: true } } },
+        });
+
+      if (!comment)
+        throw new NotFoundException(
+          `User with the id ${userId} not found in comment ${commentId}`,
+        );
+
+      let user: User;
+      const cachedCommentMentionedUserCacheKey = generateCacheKey(
+        Namespace.GENERAL,
+        Identifier.USER,
+        { userId },
+      );
+
+      const cachedCommentMentionedUser: User = await this.cacheManager.get(
+        cachedCommentMentionedUserCacheKey,
+      );
+
+      if (cachedCommentMentionedUser) {
+        user = cachedCommentMentionedUser;
+      } else {
+        user = await this.prismaService.user.findFirst({
+          where: { id: userId },
+        });
+
+        if (!user)
+          throw new NotFoundException(
+            `User with the id ${userId} not found in comment ${commentId}`,
+          );
+
+        sanitizeUser([user]);
+
+        await this.cacheManager.set(cachedCommentMentionedUserCacheKey, user);
+      }
+
+      return {
+        message: 'Mentioned user of the comment loaded successfully.',
+        user,
+      };
+    } catch (error) {
+      handleErrors(error, this.logger);
+    }
+  }
+
+  async updateComment(
+    commentId: number,
+    updateCommentDto: UpdateCommentDto,
+  ): Promise<UpdateComment> {
     const { userId, mentions, ...updateData } = updateCommentDto;
 
     try {
@@ -297,7 +370,10 @@ export class CommentService {
     }
   }
 
-  async removeComment(commentId: number, userId: number) {
+  async removeComment(
+    commentId: number,
+    userId: number,
+  ): Promise<RemoveComment> {
     try {
       const comment = await this.prismaService.comment.findFirst({
         where: { id: commentId, userId },

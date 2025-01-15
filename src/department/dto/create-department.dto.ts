@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString } from 'class-validator';
+import { IsInt, IsNotEmpty, IsString } from 'class-validator';
 
 export class CreateDepartmentDto {
   @IsNotEmpty()
@@ -8,4 +8,8 @@ export class CreateDepartmentDto {
   @IsNotEmpty()
   @IsString()
   description: string;
+
+  @IsNotEmpty()
+  @IsInt()
+  divisionId: number;
 }

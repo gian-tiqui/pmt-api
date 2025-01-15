@@ -162,7 +162,15 @@ const clearKeys = async (
   }
 };
 
+const sanitizeUser = (users: User[]) => {
+  users.map((user) => {
+    delete user.password;
+    delete user.refreshToken;
+  });
+};
+
 export {
+  sanitizeUser,
   clearKeys,
   generateCacheKey,
   getPreviousValues,
