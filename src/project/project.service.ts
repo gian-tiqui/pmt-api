@@ -101,7 +101,6 @@ export class ProjectService {
       sortOrder,
       dateWithin,
     } = query;
-
     const findProjectsCacheKey: string = generateCacheKey(
       this.namespace,
       'findProjects',

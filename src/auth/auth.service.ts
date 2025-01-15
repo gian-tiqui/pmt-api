@@ -25,29 +25,14 @@ export class AuthService {
   ) {}
 
   async register(registerDto: RegisterDto) {
-    const {
-      departmentId,
-      divisionId,
-      email,
-      firstName,
-      lastName,
-      password,
-      middleName,
-      employeeId,
-    } = registerDto;
+    const { password, ...registerData } = registerDto;
     try {
       const hashedPassword = await argon.hash(password);
 
       const newUser = await this.prismaService.user.create({
         data: {
-          email,
-          firstName,
-          middleName,
-          lastName,
-          divisionId,
-          departmentId,
+          ...registerData,
           password: hashedPassword,
-          employeeId,
         },
       });
 
@@ -91,15 +76,16 @@ export class AuthService {
         user.department.code,
       );
 
-      let refreshToken;
+      let refreshToken, updateRefreshToken;
 
       if (user.refreshToken) refreshToken = user.refreshToken;
-      else refreshToken = await this.signRefreshToken(user.id);
-
-      const updateRefreshToken = await this.prismaService.user.update({
-        where: { id: user.id },
-        data: { refreshToken },
-      });
+      else {
+        refreshToken = await this.signRefreshToken(user.id);
+        updateRefreshToken = await this.prismaService.user.update({
+          where: { id: user.id },
+          data: { refreshToken },
+        });
+      }
 
       if (!updateRefreshToken)
         throw new BadRequestException(
