@@ -218,11 +218,6 @@ export class ProjectService {
     const orderBy: object = sortBy
       ? { [sortBy]: sortOrder || 'asc' }
       : undefined;
-    const findProjectWorksCacheKey: string = generateCacheKey(
-      this.namespace,
-      'findProjectWorks',
-      { ...query, projectId },
-    );
 
     try {
       const project = await this.prismaService.project.findFirst({
@@ -232,7 +227,12 @@ export class ProjectService {
       if (!project)
         throw new NotFoundException(`Project with the ${projectId} not found.`);
 
-      let works, count;
+      let works: Work[], count: number;
+      const findProjectWorksCacheKey: string = generateCacheKey(
+        this.namespace,
+        'findProjectWorks',
+        { ...query, projectId },
+      );
       const cachedProjectWorks: { works: Work[]; count: number } =
         await this.cacheManager.get(findProjectWorksCacheKey);
 
