@@ -27,7 +27,7 @@ import {
 } from 'src/utils/enums';
 import { Cache } from 'cache-manager';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import { Comment, Task } from '@prisma/client';
+import { Comment, Task, User } from '@prisma/client';
 import {
   CreateTask,
   FindTask,
@@ -190,14 +190,14 @@ export class TaskService {
   }
 
   async findTask(taskId: number): Promise<FindTask> {
-    const findTaskCacheKey: string = generateCacheKey(
-      this.namespace,
-      Identifier.TASK,
-      { taskId },
-    );
-
     try {
       let task: Task;
+      const findTaskCacheKey: string = generateCacheKey(
+        Namespace.GENERAL,
+        Identifier.TASK,
+        { taskId },
+      );
+
       const cachedTask: Task = await this.cacheManager.get(findTaskCacheKey);
 
       if (cachedTask) {
@@ -205,6 +205,8 @@ export class TaskService {
 
         task = cachedTask;
       } else {
+        this.logger.debug('Task cache missed.');
+
         task = await this.prismaService.task.findFirst({
           where: { id: taskId },
         });
@@ -249,13 +251,11 @@ export class TaskService {
         throw new NotFoundException(`Task with the id ${taskId} not found.`);
 
       let subTasks: Task[], count: number;
-
       const findTaskSubtasksCacheKey = generateCacheKey(
         this.namespace,
         'findTaskSubtasks',
         query,
       );
-
       const cachedTaskSubtasks: { subTasks: Task[]; count: number } =
         await this.cacheManager.get(findTaskSubtasksCacheKey);
 
@@ -323,7 +323,6 @@ export class TaskService {
 
     try {
       let subTask: Task;
-
       const cachedSubTask: Task = await this.cacheManager.get(
         findTaskSubtaskCacheKey,
       );
@@ -333,7 +332,7 @@ export class TaskService {
 
         subTask = cachedSubTask;
       } else {
-        this.logger.debug(`Task Sub Task cache hit.`);
+        this.logger.debug(`Task Sub Task cache missed.`);
 
         subTask = await this.prismaService.task.findFirst({
           where: {
@@ -374,30 +373,45 @@ export class TaskService {
     );
 
     try {
-      let task;
+      let task: Task & { subtasks: { assignedTo: User }[] },
+        users: User[],
+        count: number;
 
-      const cachedTaskUsers: Task = await this.cacheManager.get(
+      const cachedTaskUsers: User[] = await this.cacheManager.get(
         findTaskUsersCacheKey,
       );
 
       if (cachedTaskUsers) {
+        this.logger.debug(`Task Users cache hit.`);
+
+        users = cachedTaskUsers;
       } else {
-        task = await this.prismaService.task.findFirst({
+        this.logger.debug(`Task Users cache missed.`);
+
+        task = (await this.prismaService.task.findFirst({
           where: { id: taskId },
           select: { subtasks: { select: { assignedTo: true } } },
-        });
+        })) as Task & { subtasks: { assignedTo: User }[] };
 
         if (!task)
           throw new BadRequestException(
             `Task with the id ${taskId} not found.`,
           );
-      }
 
-      const users = task.subtasks.map((subtask) => subtask.assignedTo);
+        users = task.subtasks.map(
+          (subtask: Task & { assignedTo: User }) => subtask.assignedTo,
+        );
+
+        count = task.subtasks.length;
+
+        await this.cacheManager.set(findTaskUsersCacheKey, { users, count });
+
+        this.taskCacheKeys.add(findTaskUsersCacheKey);
+      }
 
       return {
         message: 'Users of the task loaded successfully.',
-        count: task.subtasks.length,
+        count: count,
         users: filterUsers(users, search, offset, limit, orderBy),
       };
     } catch (error) {
@@ -406,15 +420,15 @@ export class TaskService {
   }
 
   async findTaskUser(taskId: number, userId: number): Promise<FindTaskUser> {
-    // const findTaskUserCacheKey: string = generateCacheKey(
-    //   Namespace.GENERAL,
-    //   Identifier.USER,
-    //   { userId },
-    // );
+    const findTaskUserCacheKey: string = generateCacheKey(
+      Namespace.GENERAL,
+      Identifier.USER,
+      { userId },
+    );
 
     try {
       const task = await this.prismaService.task.findFirst({
-        where: { id: taskId, assignedToId: userId },
+        where: { id: taskId, subtasks: { some: { assignedToId: userId } } },
       });
 
       if (!task)
@@ -422,9 +436,27 @@ export class TaskService {
           `User with the id ${userId} is not found in task ${taskId}`,
         );
 
+      let user: User;
+      const cachedUser: User =
+        await this.cacheManager.get(findTaskUserCacheKey);
+
+      if (cachedUser) {
+        this.logger.debug(`Task User cache hit.`);
+
+        user = cachedUser;
+      } else {
+        this.logger.debug(`Task User cache missed.`);
+
+        user = await this.prismaService.user.findFirst({
+          where: { id: userId },
+        });
+
+        await this.cacheManager.set(findTaskUserCacheKey, user);
+      }
+
       return {
         message: 'User of the task loaded successfully',
-        user: undefined,
+        user,
       };
     } catch (error) {
       handleErrors(error, this.logger);
@@ -444,13 +476,12 @@ export class TaskService {
     );
 
     try {
-      let comments: Comment[], count: number;
-
       const task = await this.prismaService.task.findFirst();
 
       if (!task)
         throw new NotFoundException(`Task with the id ${taskId} not found.`);
 
+      let comments: Comment[], count: number;
       const cachedComments: { comments: Comment[]; count: number } =
         await this.cacheManager.get(findTaskCommentsCacheKey);
 
@@ -499,10 +530,36 @@ export class TaskService {
     taskId: number,
     commentId: number,
   ): Promise<FindTaskComment> {
+    const findTaskCommentCacheKey = generateCacheKey(
+      Namespace.GENERAL,
+      Identifier.COMMENT,
+      { commentId },
+    );
+
     try {
-      const comment = await this.prismaService.comment.findFirst({
-        where: { id: commentId, taskId },
-      });
+      let comment: Comment;
+      const cachedComment: Comment = await this.cacheManager.get(
+        findTaskCommentCacheKey,
+      );
+
+      if (cachedComment) {
+        this.logger.debug(`Task Comment cache missed.`);
+
+        comment = cachedComment;
+      } else {
+        this.logger.debug(`Task Comment cache missed.`);
+
+        comment = await this.prismaService.comment.findFirst({
+          where: { id: commentId, taskId },
+        });
+
+        if (!comment)
+          throw new NotFoundException(
+            `Comment with the ${commentId} not found.`,
+          );
+
+        await this.cacheManager.set(findTaskCommentCacheKey, comment);
+      }
 
       if (!comment)
         throw new NotFoundException(
@@ -595,9 +652,16 @@ export class TaskService {
           `There was a problem in creating the log.`,
         );
 
-      await this.cacheManager.reset();
+      const updateTaskCacheKey: string = generateCacheKey(
+        Namespace.GENERAL,
+        Identifier.TASK,
+        { taskId },
+      );
 
-      this.logger.log('Cache cleared.');
+      await this.cacheManager.set(updateTaskCacheKey, {
+        ...task,
+        ...updateData,
+      });
 
       return { message: 'Work updated successfully' };
     } catch (error) {
@@ -628,9 +692,13 @@ export class TaskService {
 
       await this.prismaService.task.delete({ where: { id: taskId } });
 
-      await this.cacheManager.reset();
+      const deleteTaskCacheKey: string = generateCacheKey(
+        Namespace.GENERAL,
+        Identifier.TASK,
+        { taskId },
+      );
 
-      this.logger.log('Cache cleared.');
+      await this.cacheManager.del(deleteTaskCacheKey);
 
       return { message: 'Task deleted successfully.' };
     } catch (error) {

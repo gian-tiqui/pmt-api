@@ -59,11 +59,11 @@ export class CommentController {
     errorMessage: 'Please wait before getting a comment.',
   })
   @Get(':commentId/mentions')
-  findCommentMentions(
+  findCommentMentionedUsers(
     @Param('commentId', ParseIntPipe) commentId: number,
     @Query() query: FindAllDto,
   ) {
-    return this.commentService.findCommentMentions(commentId, query);
+    return this.commentService.findCommentMentionedUsers(commentId, query);
   }
 
   @RateLimit({
