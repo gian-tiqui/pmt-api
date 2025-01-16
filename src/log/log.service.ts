@@ -192,7 +192,7 @@ export class LogService {
       if (!logId)
         throw new NotFoundException(`Log with the id ${logId} not found.`);
 
-      findDataById(this.prismaService, userId, EntityType.USER);
+      await findDataById(this.prismaService, userId, EntityType.USER);
 
       const deletedLogLog = await this.prismaService.log.create({
         data: {

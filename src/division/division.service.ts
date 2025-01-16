@@ -53,7 +53,7 @@ export class DivisionService {
   ): Promise<CreateDivision> {
     const { userId, ...data } = createDivisionDto;
     try {
-      findDataById(this.prismaService, userId, EntityType.USER);
+      await findDataById(this.prismaService, userId, EntityType.USER);
 
       await this.prismaService.division.create({ data });
 
@@ -174,7 +174,7 @@ export class DivisionService {
     const { search, departmentId, offset, limit, sortBy, sortOrder } = query;
 
     try {
-      findDataById(this.prismaService, divisionId, EntityType.DIVISION);
+      await findDataById(this.prismaService, divisionId, EntityType.DIVISION);
 
       const findDivisionUsersCacheKey: string = generateCacheKey(
         this.namespace,
@@ -289,7 +289,7 @@ export class DivisionService {
     const { search, offset, limit, sortBy, sortOrder } = query;
 
     try {
-      findDataById(this.prismaService, divisionId, EntityType.DIVISION);
+      await findDataById(this.prismaService, divisionId, EntityType.DIVISION);
 
       const findDivisionDepartmentsCacheKey: string = generateCacheKey(
         this.namespace,
@@ -408,7 +408,7 @@ export class DivisionService {
   ) {
     const { userId, ...updateData } = updateDivisionDto;
     try {
-      findDataById(this.prismaService, userId, EntityType.USER);
+      await findDataById(this.prismaService, userId, EntityType.USER);
 
       const division = await this.prismaService.division.findFirst({
         where: { id: divisionId },
@@ -471,7 +471,7 @@ export class DivisionService {
           `Division with the id ${divisionId} not found.`,
         );
 
-      findDataById(this.prismaService, userId, EntityType.USER);
+      await findDataById(this.prismaService, userId, EntityType.USER);
 
       const deletedDivisionLog = await this.prismaService.log.create({
         data: {

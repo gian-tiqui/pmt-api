@@ -53,7 +53,7 @@ export class DepartmentService {
     try {
       const { userId, ...createDepartmentData } = createDepartmentDto;
 
-      findDataById(this.prismaService, userId, EntityType.USER);
+      await findDataById(this.prismaService, userId, EntityType.USER);
 
       await this.prismaService.department.create({
         data: {
@@ -179,7 +179,11 @@ export class DepartmentService {
     const { search, offset, limit, sortBy, sortOrder } = query;
 
     try {
-      findDataById(this.prismaService, departmentId, EntityType.DEPARTMENT);
+      await findDataById(
+        this.prismaService,
+        departmentId,
+        EntityType.DEPARTMENT,
+      );
 
       const findDepartmentUsersCacheKey: string = generateCacheKey(
         this.namespace,
@@ -346,7 +350,7 @@ export class DepartmentService {
           `Department with the id ${deptId} not found.`,
         );
 
-      findDataById(this.prismaService, userId, EntityType.USER);
+      await findDataById(this.prismaService, userId, EntityType.USER);
 
       const deletedDepartmentLog = await this.prismaService.log.create({
         data: {

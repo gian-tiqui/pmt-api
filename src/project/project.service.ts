@@ -13,7 +13,6 @@ import {
   getPreviousValues,
   handleErrors,
   firstDateGreaterThanSecondDate,
-  validateProjectDepth,
   generateCacheKey,
   clearKeys,
   findDataById,
@@ -60,7 +59,7 @@ export class ProjectService {
         'Project',
       );
 
-      findDataById(
+      await findDataById(
         this.prismaService,
         createProjectDto.authorId,
         EntityType.USER,
@@ -366,7 +365,7 @@ export class ProjectService {
 
       const { works, ...project } = _project;
 
-      validateProjectDepth(project, works);
+      this.logger.debug(works);
 
       const updatedProject = await this.prismaService.$transaction(
         async (prisma) => {
