@@ -202,11 +202,11 @@ export class TaskService {
       const cachedTask: Task = await this.cacheManager.get(findTaskCacheKey);
 
       if (cachedTask) {
-        this.logger.debug(`Task cache hit.`);
+        this.logger.debug(`Task with the id ${taskId} cache hit.`);
 
         task = cachedTask;
       } else {
-        this.logger.debug('Task cache missed.');
+        this.logger.debug(`Task with the id ${taskId} cache missed.`);
 
         task = await this.prismaService.task.findFirst({
           where: { id: taskId },
@@ -329,11 +329,13 @@ export class TaskService {
       );
 
       if (cachedSubTask) {
-        this.logger.debug(`Task Sub Task cache hit.`);
+        this.logger.debug(`Task Sub Task with the id ${subTaskId} cache hit.`);
 
         subTask = cachedSubTask;
       } else {
-        this.logger.debug(`Task Sub Task cache missed.`);
+        this.logger.debug(
+          `Task Sub Task with the id ${subTaskId} cache missed.`,
+        );
 
         subTask = await this.prismaService.task.findFirst({
           where: {
@@ -390,7 +392,7 @@ export class TaskService {
         this.logger.debug(`Task Users cache missed.`);
 
         task = (await this.prismaService.task.findFirst({
-          where: { id: taskId },
+          where: { id: taskId, parentId: null },
           select: { subtasks: { select: { assignedTo: true } } },
         })) as Task & { subtasks: { assignedTo: User }[] };
 
@@ -444,11 +446,11 @@ export class TaskService {
         await this.cacheManager.get(findTaskUserCacheKey);
 
       if (cachedUser) {
-        this.logger.debug(`Task User cache hit.`);
+        this.logger.debug(`Task User with the id ${userId} cache hit.`);
 
         user = cachedUser;
       } else {
-        this.logger.debug(`Task User cache missed.`);
+        this.logger.debug(`Task User with the id ${userId} cache missed.`);
 
         user = await this.prismaService.user.findFirst({
           where: { id: userId },
@@ -548,11 +550,11 @@ export class TaskService {
       );
 
       if (cachedComment) {
-        this.logger.debug(`Task Comment cache missed.`);
+        this.logger.debug(`Task Comment with id ${commentId} cache missed.`);
 
         comment = cachedComment;
       } else {
-        this.logger.debug(`Task Comment cache missed.`);
+        this.logger.debug(`Task Comment with id ${commentId} cache missed.`);
 
         comment = await this.prismaService.comment.findFirst({
           where: { id: commentId, taskId },

@@ -1,4 +1,12 @@
-import { Comment, Department, Project, Task, User, Work } from '@prisma/client';
+import {
+  Comment,
+  Department,
+  Division,
+  Project,
+  Task,
+  User,
+  Work,
+} from '@prisma/client';
 
 type CreateBase = {
   message: string;
@@ -174,6 +182,46 @@ type UpdateDepartment = UpdateBase;
 
 type RemoveDepartment = RemoveBase;
 
+type CreateDivision = CreateBase;
+
+type FindDivisions = {
+  message: string;
+  count: number;
+  divisions: Division[];
+};
+
+type FindDivision = {
+  message: string;
+  division: Division;
+};
+
+type FindDivisionUsers = {
+  message: string;
+  count: number;
+  users: User[];
+};
+
+type FindDivisionUser = {
+  message: string;
+  count: string;
+  user: User;
+};
+
+type FindDivisionDepartments = {
+  message: string;
+  count: string;
+  departments: Department[];
+};
+
+type FindDivisionDepartment = {
+  message: string;
+  department: Department;
+};
+
+type UpdateDivision = UpdateBase;
+
+type RemoveDivision = RemoveBase;
+
 export type {
   CreateProject,
   FindProjects,
@@ -214,4 +262,13 @@ export type {
   FindDepartmentUser,
   UpdateDepartment,
   RemoveDepartment,
+  CreateDivision,
+  FindDivisions,
+  FindDivision,
+  FindDivisionUsers,
+  FindDivisionUser,
+  FindDivisionDepartments,
+  FindDivisionDepartment,
+  UpdateDivision,
+  RemoveDivision,
 };

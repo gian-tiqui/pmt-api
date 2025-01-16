@@ -166,11 +166,11 @@ export class WorkService {
 
     try {
       if (cachedWork) {
-        this.logger.debug('Work cache hit.');
+        this.logger.debug(`Work with the id ${workId} cache hit.`);
 
         work = cachedWork;
       } else {
-        this.logger.debug('Work cache missed.');
+        this.logger.debug(`Work with the id ${workId} cache missed.`);
 
         work = await this.prismaService.work.findFirst({
           where: { id: workId },
@@ -218,12 +218,12 @@ export class WorkService {
         await this.cacheManager.get(findWorkTasksCacheKey);
 
       if (cachedTasks) {
-        this.logger.debug('Cache hit.');
+        this.logger.debug('Work tasks cache hit.');
 
         tasks = cachedTasks.tasks;
         count = cachedTasks.count;
       } else {
-        this.logger.debug('Cache missed.');
+        this.logger.debug('Work tasks cache missed.');
 
         const where: object = {
           workId,
@@ -281,11 +281,11 @@ export class WorkService {
         await this.cacheManager.get(workTaskCacheKey);
 
       if (cachedWorkTask) {
-        this.logger.debug('Cache hit.');
+        this.logger.debug(`Work task with the id ${taskId} cache hit.`);
 
         task = cachedWorkTask;
       } else {
-        this.logger.debug('Cache missed.');
+        this.logger.debug(`Work task with the id ${taskId} cache missed.`);
 
         task = await this.prismaService.task.findFirst({
           where: { id: taskId, workId },

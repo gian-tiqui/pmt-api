@@ -1,4 +1,15 @@
-import { PartialType } from '@nestjs/swagger';
-import { CreateDivisionDto } from './create-division.dto';
+import { IsInt, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
-export class UpdateDivisionDto extends PartialType(CreateDivisionDto) {}
+export class UpdateDivisionDto {
+  @IsString()
+  @IsOptional()
+  code: string;
+
+  @IsString()
+  @IsOptional()
+  description: string;
+
+  @IsInt()
+  @IsNotEmpty()
+  userId: number;
+}
