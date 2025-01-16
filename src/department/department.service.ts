@@ -76,7 +76,6 @@ export class DepartmentService {
 
   async findDepartments(query: FindAllDto): Promise<FindDepartments> {
     const { search, offset, limit, sortBy, sortOrder } = query;
-    const orderBy = sortBy ? { [sortBy]: sortOrder || 'asc' } : undefined;
     const findDepartmentsCacheKey: string = generateCacheKey(
       this.namespace,
       'findDepartments',
@@ -105,6 +104,7 @@ export class DepartmentService {
             ],
           }),
         };
+        const orderBy = sortBy ? { [sortBy]: sortOrder || 'asc' } : undefined;
 
         departments = await this.prismaService.department.findMany({
           where,
@@ -158,13 +158,13 @@ export class DepartmentService {
           where: { id: deptId },
         });
 
+        if (!department)
+          throw new NotFoundException(
+            `Department with the id ${deptId} not found.`,
+          );
+
         await this.cacheManager.set(findDepartmentCacheKey, department);
       }
-
-      if (!department)
-        throw new NotFoundException(
-          `Department with the id ${deptId} not found.`,
-        );
 
       return { message: 'Department loaded successfully', department };
     } catch (error) {
@@ -277,6 +277,11 @@ export class DepartmentService {
           where: { id: userId, departmentId: deptId },
         });
 
+        if (!user)
+          throw new NotFoundException(
+            `Department user with the id ${userId} not found.`,
+          );
+
         await this.cacheManager.set(findDepartmentUserCacheKey, user);
       }
 
@@ -302,16 +307,6 @@ export class DepartmentService {
       if (!department)
         throw new NotFoundException(`Department with the ${deptId} not found.`);
 
-      const updatedData = await this.prismaService.department.update({
-        where: { id: deptId },
-        data: { ...updateData },
-      });
-
-      if (!updatedData)
-        throw new BadRequestException(
-          'There was a problem in updating the department',
-        );
-
       const updatedDepartmentLog = await this.prismaService.log.create({
         data: {
           logs: getPreviousValues(department, updateData),
@@ -323,6 +318,11 @@ export class DepartmentService {
 
       if (!updatedDepartmentLog)
         throw new BadRequestException('There was a problem in creating a log.');
+
+      await this.prismaService.department.update({
+        where: { id: deptId },
+        data: updateData,
+      });
 
       const updateDepartmentCacheKey: string = generateCacheKey(
         Namespace.GENERAL,

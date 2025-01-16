@@ -52,25 +52,33 @@ export class DivisionController {
   findDivisionUsers(
     @Param('divisionId', ParseIntPipe) divisionId: number,
     @Query() query: FindAllDto,
-  ): Promise<FindDivisionUsers> {}
+  ): Promise<FindDivisionUsers> {
+    return this.divisionService.findDivisionUsers(divisionId, query);
+  }
 
   @Get(':divisionId/user/:userId')
   findDivisionUser(
     @Param('divisionId', ParseIntPipe) divisionId: number,
     @Param('userId', ParseIntPipe) userId: number,
-  ): Promise<FindDivisionUser> {}
+  ): Promise<FindDivisionUser> {
+    return this.divisionService.findDivisionUser(divisionId, userId);
+  }
 
   @Get(':divisionId/department')
   findDivisionDepartments(
     @Param('divisionId', ParseIntPipe) divisionId: number,
     @Query() query: FindAllDto,
-  ): Promise<FindDivisionDepartments> {}
+  ): Promise<FindDivisionDepartments> {
+    return this.findDivisionDepartments(divisionId, query);
+  }
 
-  @Get(':divisionId/user/:userId')
+  @Get(':divisionId/user/:deptId')
   findDivisionDepartment(
     @Param('divisionId', ParseIntPipe) divisionId: number,
-    @Param('userId', ParseIntPipe) userId: number,
-  ): Promise<FindDivisionDepartment> {}
+    @Param('deptId', ParseIntPipe) deptId: number,
+  ): Promise<FindDivisionDepartment> {
+    return this.findDivisionDepartment(divisionId, deptId);
+  }
 
   @Patch(':divisionId')
   updateDivision(

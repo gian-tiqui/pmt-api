@@ -53,35 +53,27 @@ export class UserService {
     const orderBy = sortBy ? { [sortBy]: sortOrder || 'asc' } : undefined;
 
     try {
+      const where: object = {
+        ...(search && {
+          OR: [
+            { firstName: { contains: search, mode: 'insensitive' } },
+            { middleName: { contains: search, mode: 'insensitive' } },
+            { lastName: { contains: search, mode: 'insensitive' } },
+          ],
+        }),
+        ...(departmentId && { departmentId }),
+        ...(divisionId && { divisionId }),
+      };
+
       const users = await this.prismaService.user.findMany({
-        where: {
-          ...(search && {
-            OR: [
-              { firstName: { contains: search, mode: 'insensitive' } },
-              { middleName: { contains: search, mode: 'insensitive' } },
-              { lastName: { contains: search, mode: 'insensitive' } },
-            ],
-          }),
-          ...(departmentId && { departmentId }),
-          ...(divisionId && { divisionId }),
-        },
+        where,
         orderBy,
         skip: offset || PaginationDefault.OFFSET,
         take: limit || PaginationDefault.LIMIT,
       });
 
       const count = await this.prismaService.user.count({
-        where: {
-          ...(search && {
-            OR: [
-              { firstName: { contains: search, mode: 'insensitive' } },
-              { middleName: { contains: search, mode: 'insensitive' } },
-              { lastName: { contains: search, mode: 'insensitive' } },
-            ],
-          }),
-          ...(departmentId && { departmentId }),
-          ...(divisionId && { divisionId }),
-        },
+        where,
       });
 
       return {

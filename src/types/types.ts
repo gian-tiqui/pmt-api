@@ -203,13 +203,12 @@ type FindDivisionUsers = {
 
 type FindDivisionUser = {
   message: string;
-  count: string;
   user: User;
 };
 
 type FindDivisionDepartments = {
   message: string;
-  count: string;
+  count: number;
   departments: Department[];
 };
 

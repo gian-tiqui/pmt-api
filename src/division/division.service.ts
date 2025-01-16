@@ -1,4 +1,10 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { CreateDivisionDto } from './dto/create-division.dto';
 import { UpdateDivisionDto } from './dto/update-division.dto';
 import { FindAllDto } from 'src/project/dto/find-all.dto';
@@ -8,6 +14,7 @@ import {
   handleErrors,
   findDataById,
   generateCacheKey,
+  getPreviousValues,
 } from 'src/utils/functions';
 import {
   CreateDivision,
@@ -22,10 +29,12 @@ import {
 import {
   EntityType,
   Identifier,
+  LogMethod,
+  LogType,
   Namespace,
   PaginationDefault,
 } from 'src/utils/enums';
-import { Division } from '@prisma/client';
+import { Department, Division, User } from '@prisma/client';
 
 @Injectable()
 export class DivisionService {
@@ -150,19 +159,285 @@ export class DivisionService {
     }
   }
 
-  async findDivisionUsers(): Promise<FindDivisionUsers> {}
+  async findDivisionUsers(
+    divisionId: number,
+    query: FindAllDto,
+  ): Promise<FindDivisionUsers> {
+    const { search, departmentId, offset, limit, sortBy, sortOrder } = query;
 
-  async findDivisionUser(): Promise<FindDivisionUser> {}
+    try {
+      findDataById(this.prismaService, divisionId, EntityType.DIVISION);
 
-  async findDivisionDepartments(): Promise<FindDivisionDepartments> {}
+      const findDivisionUsersCacheKey: string = generateCacheKey(
+        this.namespace,
+        'findDivisionUsers',
+        query,
+      );
 
-  async findDivisionDepartment(): Promise<FindDivisionDepartment> {}
+      let users: User[], count: number;
+
+      const cachedDivisionUsers: { users: User[]; count: number } =
+        await this.cacheManager.get(findDivisionUsersCacheKey);
+
+      if (cachedDivisionUsers) {
+        this.logger.debug(`Division users cache hit.`);
+
+        users = cachedDivisionUsers.users;
+        count = cachedDivisionUsers.count;
+      } else {
+        this.logger.debug(`Division users cache missed.`);
+
+        const where: object = {
+          ...(search && {
+            OR: [
+              { firstName: { contains: search, mode: 'insensitive' } },
+              { middleName: { contains: search, mode: 'insensitive' } },
+              { lastName: { contains: search, mode: 'insensitive' } },
+            ],
+          }),
+          ...(departmentId && { departmentId }),
+          divisionId,
+        };
+        const orderBy = sortBy ? { [sortBy]: sortOrder || 'asc' } : undefined;
+
+        users = await this.prismaService.user.findMany({
+          where,
+          orderBy,
+          skip: offset || PaginationDefault.OFFSET,
+          take: limit || PaginationDefault.LIMIT,
+        });
+
+        count = await this.prismaService.user.count({
+          where,
+        });
+
+        await this.cacheManager.set(findDivisionUsersCacheKey, {
+          users,
+          count,
+        });
+
+        this.divisionCacheKeys.add(findDivisionUsersCacheKey);
+      }
+
+      return {
+        message: 'Division users loaded successfully.',
+        count,
+        users,
+      };
+    } catch (error) {
+      handleErrors(error, this.logger);
+    }
+  }
+
+  async findDivisionUser(
+    divisionId: number,
+    userId: number,
+  ): Promise<FindDivisionUser> {
+    try {
+      const findDivisionUserCacheKey: string = generateCacheKey(
+        Namespace.GENERAL,
+        Identifier.USER,
+        { userId },
+      );
+
+      let user: User;
+
+      const cachedDivisionUser: User = await this.cacheManager.get(
+        findDivisionUserCacheKey,
+      );
+
+      if (cachedDivisionUser) {
+        this.logger.debug(`Division user with the id ${userId} cache hit.`);
+
+        user = cachedDivisionUser;
+      } else {
+        this.logger.debug(`Division user with the id ${userId} cache missed.`);
+
+        user = await this.prismaService.user.findFirst({
+          where: { id: userId, divisionId },
+        });
+
+        if (!user)
+          throw new NotFoundException(
+            `Division user with the id ${userId} not found.`,
+          );
+
+        await this.cacheManager.set(findDivisionUserCacheKey, user);
+      }
+
+      return {
+        message: 'User of the division loaded successfully.',
+        user,
+      };
+    } catch (error) {
+      handleErrors(error, this.logger);
+    }
+  }
+
+  async findDivisionDepartments(
+    divisionId: number,
+    query: FindAllDto,
+  ): Promise<FindDivisionDepartments> {
+    const { search, offset, limit, sortBy, sortOrder } = query;
+
+    try {
+      findDataById(this.prismaService, divisionId, EntityType.DIVISION);
+
+      const findDivisionDepartmentsCacheKey: string = generateCacheKey(
+        this.namespace,
+        'findDivisionDepartments',
+        query,
+      );
+
+      let departments: Department[], count: number;
+
+      const cachedDivisionDepartments: {
+        departments: Department[];
+        count: number;
+      } = await this.cacheManager.get(findDivisionDepartmentsCacheKey);
+
+      if (cachedDivisionDepartments) {
+        this.logger.debug(`Division departments cache hit.`);
+
+        departments = cachedDivisionDepartments.departments;
+        count = cachedDivisionDepartments.count;
+      } else {
+        this.logger.debug(`Division departments cahce missed.`);
+
+        const where: object = {
+          ...(search && {
+            OR: [
+              { code: { contains: search, mode: 'insensitive' } },
+              { description: { contains: search, mode: 'insensitive' } },
+            ],
+          }),
+        };
+
+        const orderBy = sortBy ? { [sortBy]: sortOrder || 'asc' } : undefined;
+
+        departments = await this.prismaService.department.findMany({
+          where,
+          orderBy,
+          skip: offset || PaginationDefault.OFFSET,
+          take: limit || PaginationDefault.LIMIT,
+        });
+
+        count = await this.prismaService.department.count({
+          where,
+        });
+
+        await this.cacheManager.set(findDivisionDepartmentsCacheKey, {
+          departments,
+          count,
+        });
+
+        this.divisionCacheKeys.add(findDivisionDepartmentsCacheKey);
+      }
+
+      return {
+        message: 'Division departments loaded successfully.',
+        count,
+        departments,
+      };
+    } catch (error) {
+      handleErrors(error, this.logger);
+    }
+  }
+
+  async findDivisionDepartment(
+    divisionId: number,
+    deptId: number,
+  ): Promise<FindDivisionDepartment> {
+    try {
+      const findDivisionDepartmentCacheKey: string = generateCacheKey(
+        Namespace.GENERAL,
+        Identifier.DEPARTMENT,
+        { deptId },
+      );
+
+      const cachedDivisionDepartment: Department = await this.cacheManager.get(
+        findDivisionDepartmentCacheKey,
+      );
+
+      let department: Department;
+
+      if (cachedDivisionDepartment) {
+        this.logger.debug(
+          `Division department with the id ${deptId} cache hit.`,
+        );
+
+        department = cachedDivisionDepartment;
+      } else {
+        this.logger.debug(
+          `Division department with the id ${deptId} cache missed.`,
+        );
+
+        department = await this.prismaService.department.findFirst({
+          where: { id: deptId, divisionId },
+        });
+
+        if (!department)
+          throw new NotFoundException(
+            `Department with the id ${deptId} not found.`,
+          );
+
+        await this.cacheManager.set(findDivisionDepartmentCacheKey, department);
+      }
+
+      return {
+        message: 'Division department loaded successfully.',
+        department,
+      };
+    } catch (error) {
+      handleErrors(error, this.logger);
+    }
+  }
 
   async updateDivision(
     divisionId: number,
     updateDivisionDto: UpdateDivisionDto,
   ) {
+    const { userId, ...updateData } = updateDivisionDto;
     try {
+      const division = await this.prismaService.division.findFirst({
+        where: { id: divisionId },
+      });
+
+      if (!division)
+        throw new NotFoundException(
+          `Division with the id ${divisionId} not found.`,
+        );
+
+      const updatedDivisionLog = await this.prismaService.log.create({
+        data: {
+          logs: getPreviousValues(division, updateData),
+          editedBy: userId,
+          logMethodId: LogMethod.UPDATE,
+          logTypeId: LogType.DIVISION,
+        },
+      });
+
+      if (!updatedDivisionLog)
+        throw new BadRequestException(
+          `There was a problem in creating a log for division.`,
+        );
+
+      await this.prismaService.division.update({
+        where: { id: divisionId },
+        data: updateData,
+      });
+
+      const updateDivisionCacheKey: string = generateCacheKey(
+        Namespace.GENERAL,
+        Identifier.DIVISION,
+        { divisionId },
+      );
+
+      await this.cacheManager.set(updateDivisionCacheKey, {
+        ...division,
+        updateData,
+      });
+
       return {
         message: 'Division updated successfully.',
       };
@@ -176,6 +451,43 @@ export class DivisionService {
     userId: number,
   ): Promise<RemoveDivision> {
     try {
+      const division = await this.prismaService.division.findFirst({
+        where: { id: divisionId },
+      });
+
+      if (!division)
+        throw new NotFoundException(
+          `Division with the id ${divisionId} not found.`,
+        );
+
+      findDataById(this.prismaService, userId, EntityType.DIVISION);
+
+      const deletedDivisionLog = await this.prismaService.log.create({
+        data: {
+          logs: division,
+          editedBy: userId,
+          logMethodId: LogMethod.DELETE,
+          logTypeId: LogType.DIVISION,
+        },
+      });
+
+      if (!deletedDivisionLog)
+        throw new BadRequestException(
+          `There was a problem in creating a division deletion log`,
+        );
+
+      await this.prismaService.division.delete({ where: { id: divisionId } });
+
+      const deleteDivisionCacheKey: string = generateCacheKey(
+        Namespace.GENERAL,
+        Identifier.DEPARTMENT,
+        {
+          divisionId,
+        },
+      );
+
+      await this.cacheManager.del(deleteDivisionCacheKey);
+
       return {
         message: 'Division deleted successfully.',
       };
