@@ -22,6 +22,7 @@ import {
   LogMethod,
   LogType,
   Namespace,
+  PaginationDefault,
 } from 'src/utils/enums';
 import { FindAllDto } from 'src/project/dto/find-all.dto';
 
@@ -52,9 +53,53 @@ export class LogService {
     }
   }
 
-  async findLogsBasedOnType(typeId: number, query: FindAllDto) {}
+  async findLogsBasedOnType(typeId: number, query: FindAllDto) {
+    const { offset, limit } = query;
 
-  async findLogsBasedOnMethod(methodId: number, query: FindAllDto) {}
+    try {
+      const logs = await this.prismaService.log.findMany({
+        where: { logTypeId: typeId },
+        skip: offset || PaginationDefault.OFFSET,
+        take: limit || PaginationDefault.LIMIT,
+      });
+
+      const count = await this.prismaService.log.count({
+        where: { logTypeId: typeId },
+      });
+
+      return {
+        message: 'Logs loaded successfully.',
+        count,
+        logs,
+      };
+    } catch (error) {
+      handleErrors(error, this.logger);
+    }
+  }
+
+  async findLogsBasedOnMethod(methodId: number, query: FindAllDto) {
+    const { offset, limit } = query;
+
+    try {
+      const logs = await this.prismaService.log.findMany({
+        where: { logMethodId: methodId },
+        skip: offset || PaginationDefault.OFFSET,
+        take: limit || PaginationDefault.LIMIT,
+      });
+
+      const count = await this.prismaService.log.count({
+        where: { logMethodId: methodId },
+      });
+
+      return {
+        message: 'Logs loaded successfully.',
+        count,
+        logs,
+      };
+    } catch (error) {
+      handleErrors(error, this.logger);
+    }
+  }
 
   async findLog(logId: number) {
     try {

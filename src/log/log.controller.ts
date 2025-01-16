@@ -28,7 +28,7 @@ export class LogController {
     @Param('typeId', ParseIntPipe) typeId: number,
     @Query() query: FindAllDto,
   ) {
-    return this.findLogsBasedOnType(typeId, query);
+    return this.logService.findLogsBasedOnType(typeId, query);
   }
 
   @Get(':methodId/log-method')
