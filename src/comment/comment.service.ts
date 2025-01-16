@@ -56,7 +56,16 @@ export class CommentService {
     const { mentions, ...createData } = createCommentDto;
 
     try {
-      findDataById(this.prismaService, createData.taskId, EntityType.TASK);
+      await findDataById(
+        this.prismaService,
+        createData.taskId,
+        EntityType.TASK,
+      );
+      await findDataById(
+        this.prismaService,
+        createData.userId,
+        EntityType.USER,
+      );
 
       const convertedMentions: { userId: number }[] = convertMentions(mentions);
 

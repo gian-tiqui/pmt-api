@@ -130,12 +130,6 @@ const filterUsers = (
   return filteredUsers.slice(start, end);
 };
 
-const validateProjectDepth = (project: Project, works: Work[]) => {};
-
-const validateWorkDepth = (work: Work, task: Task[]) => {};
-
-const validateTaskDepth = (task: Task, subTasks: Task[]) => {};
-
 const generateCacheKey = (
   namespace: string,
   identifier: string | number,
@@ -177,7 +171,9 @@ const findDataById = async (
 ) => {
   switch (entityType) {
     case EntityType.COMMENT:
-      const comment = await prismaService.comment.findFirst({ where: { id } });
+      const comment = await prismaService.comment.findFirst({
+        where: { id },
+      });
 
       if (!comment)
         throw new NotFoundException(`Comment with the ${id} not found.`);
@@ -200,7 +196,9 @@ const findDataById = async (
         throw new NotFoundException(`Division with the ${id} not found.`);
       break;
     case EntityType.PROJECT:
-      const project = await prismaService.project.findFirst({ where: { id } });
+      const project = await prismaService.project.findFirst({
+        where: { id },
+      });
 
       if (!project)
         throw new NotFoundException(`Project with the ${id} not found.`);
@@ -245,7 +243,4 @@ export {
   firstDateGreaterThanSecondDate,
   validateParentAndChildDates,
   filterUsers,
-  validateProjectDepth,
-  validateWorkDepth,
-  validateTaskDepth,
 };
