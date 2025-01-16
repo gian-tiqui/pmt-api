@@ -282,11 +282,11 @@ export class CommentService {
       );
 
       if (cachedCommentMentionedUser) {
-        this.logger.log(`User with the id ${userId} cache hit.`);
+        this.logger.debug(`User with the id ${userId} cache hit.`);
 
         user = cachedCommentMentionedUser;
       } else {
-        this.logger.log(`User with the id ${userId} cache missed.`);
+        this.logger.debug(`User with the id ${userId} cache missed.`);
 
         user = await this.prismaService.user.findFirst({
           where: { id: userId },

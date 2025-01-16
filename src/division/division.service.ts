@@ -179,7 +179,7 @@ export class DivisionService {
       const findDivisionUsersCacheKey: string = generateCacheKey(
         this.namespace,
         'findDivisionUsers',
-        query,
+        { ...query, divisionId },
       );
 
       let users: User[], count: number;
