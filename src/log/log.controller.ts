@@ -23,9 +23,20 @@ export class LogController {
     return this.logService.createLog(createLogDto);
   }
 
-  @Get()
-  findAll(@Query() query: FindAllDto) {
-    return this.logService.findLogs(query);
+  @Get(':typeId/log-types')
+  findLogsBasedOnType(
+    @Param('typeId', ParseIntPipe) typeId: number,
+    @Query() query: FindAllDto,
+  ) {
+    return this.findLogsBasedOnType(typeId, query);
+  }
+
+  @Get(':methodId/log-method')
+  findLogsBasedOnMethod(
+    @Param('methodId', ParseIntPipe) methodId: number,
+    @Query() query: FindAllDto,
+  ) {
+    return this.logService.findLogsBasedOnMethod(methodId, query);
   }
 
   @Get(':logId')

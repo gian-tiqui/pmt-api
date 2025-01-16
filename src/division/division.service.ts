@@ -15,6 +15,7 @@ import {
   findDataById,
   generateCacheKey,
   getPreviousValues,
+  clearKeys,
 } from 'src/utils/functions';
 import {
   CreateDivision,
@@ -55,6 +56,13 @@ export class DivisionService {
       findDataById(this.prismaService, userId, EntityType.USER);
 
       await this.prismaService.division.create({ data });
+
+      clearKeys(
+        this.divisionCacheKeys,
+        this.cacheManager,
+        this.logger,
+        'Division',
+      );
 
       return {
         message: 'Division created successfully.',
@@ -311,6 +319,7 @@ export class DivisionService {
               { description: { contains: search, mode: 'insensitive' } },
             ],
           }),
+          divisionId,
         };
 
         const orderBy = sortBy ? { [sortBy]: sortOrder || 'asc' } : undefined;
@@ -399,6 +408,8 @@ export class DivisionService {
   ) {
     const { userId, ...updateData } = updateDivisionDto;
     try {
+      findDataById(this.prismaService, userId, EntityType.USER);
+
       const division = await this.prismaService.division.findFirst({
         where: { id: divisionId },
       });
@@ -435,7 +446,7 @@ export class DivisionService {
 
       await this.cacheManager.set(updateDivisionCacheKey, {
         ...division,
-        updateData,
+        ...updateData,
       });
 
       return {
@@ -460,7 +471,7 @@ export class DivisionService {
           `Division with the id ${divisionId} not found.`,
         );
 
-      findDataById(this.prismaService, userId, EntityType.DIVISION);
+      findDataById(this.prismaService, userId, EntityType.USER);
 
       const deletedDivisionLog = await this.prismaService.log.create({
         data: {
