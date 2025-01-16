@@ -10,8 +10,9 @@ import { CreateWorkDto } from 'src/work/dto/create-work.dto';
 import { UpdateWorkDto } from 'src/work/dto/update-work.dto';
 import { CreateTaskDto } from 'src/task/dto/create-task.dto';
 import { UpdateTaskDto } from 'src/task/dto/update-task.dto';
-import { PaginationDefault } from './enums';
+import { EntityType, PaginationDefault } from './enums';
 import { Cache } from '@nestjs/cache-manager';
+import { PrismaService } from 'src/prisma/prisma.service';
 
 const getPreviousValues = (original, updates) => {
   const changes = {};
@@ -169,7 +170,73 @@ const sanitizeUser = (users: User[]) => {
   });
 };
 
+const findDataById = async (
+  prismaService: PrismaService,
+  id: number,
+  entityType: number,
+) => {
+  switch (entityType) {
+    case EntityType.COMMENT:
+      const comment = await prismaService.comment.findFirst({ where: { id } });
+
+      if (!comment)
+        throw new NotFoundException(`Comment with the ${id} not found.`);
+      break;
+    case EntityType.DEPARTMENT:
+      const department = await prismaService.department.findFirst({
+        where: { id },
+      });
+
+      if (!department)
+        throw new NotFoundException(`Department with the ${id} not found.`);
+
+      break;
+    case EntityType.DIVISION:
+      const division = await prismaService.division.findFirst({
+        where: { id },
+      });
+
+      if (!division)
+        throw new NotFoundException(`Division with the ${id} not found.`);
+      break;
+    case EntityType.PROJECT:
+      const project = await prismaService.project.findFirst({ where: { id } });
+
+      if (!project)
+        throw new NotFoundException(`Project with the ${id} not found.`);
+      break;
+    case EntityType.TASK:
+      const task = await prismaService.task.findFirst({ where: { id } });
+
+      if (!task) throw new NotFoundException(`Task with the ${id} not found.`);
+      break;
+    case EntityType.USER:
+      const user = await prismaService.user.findFirst({ where: { id } });
+
+      if (!user) throw new NotFoundException(`User with the ${id} not found.`);
+      break;
+    case EntityType.WORK:
+      const work = await prismaService.work.findFirst({ where: { id } });
+
+      if (!work) throw new NotFoundException(`Work with the ${id} not found.`);
+      break;
+  }
+};
+
+const convertMentions = (mentionsString: string) => {
+  if (mentionsString) {
+    return mentionsString.split(',').map((id) => {
+      const parsedId = parseInt(id, 10);
+      if (isNaN(parsedId))
+        throw new BadRequestException(`Invalid mention ID: ${id}`);
+      return { userId: parsedId };
+    });
+  }
+};
+
 export {
+  convertMentions,
+  findDataById,
   sanitizeUser,
   clearKeys,
   generateCacheKey,

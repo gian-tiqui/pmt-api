@@ -21,6 +21,18 @@ enum LogType {
   TASK = 5,
   USER = 6,
   WORK = 7,
+  DIVISION = 8,
+}
+
+enum EntityType {
+  COMMENT = 1,
+  DEPARTMENT = 2,
+  PROJECT = 3,
+  SUBTASK = 4,
+  TASK = 5,
+  USER = 6,
+  WORK = 7,
+  DIVISION = 8,
 }
 
 enum CacheConfig {
@@ -47,6 +59,7 @@ enum Namespace {
 }
 
 export {
+  EntityType,
   Namespace,
   LogMethod,
   PaginationDefault,

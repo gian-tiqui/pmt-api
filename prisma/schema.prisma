@@ -50,6 +50,8 @@ model User {
   mentions          Mention[]      @relation("MentionedIn")
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
+  
+  // @@unique([firstName, lastName, middleName])
 }
 
 model Comment {

@@ -16,8 +16,10 @@ import {
   validateProjectDepth,
   generateCacheKey,
   clearKeys,
+  findDataById,
 } from 'src/utils/functions';
 import {
+  EntityType,
   Identifier,
   LogMethod,
   LogType,
@@ -26,7 +28,7 @@ import {
 } from 'src/utils/enums';
 import { Cache } from 'cache-manager';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import { Project, User, Work } from '@prisma/client';
+import { Project, Work } from '@prisma/client';
 import {
   CreateProject,
   FindProject,
@@ -58,14 +60,11 @@ export class ProjectService {
         'Project',
       );
 
-      const user: User = await this.prismaService.user.findFirst({
-        where: { id: createProjectDto.authorId },
-      });
-
-      if (!user)
-        throw new NotFoundException(
-          `User with the id ${createProjectDto.authorId} not found.`,
-        );
+      findDataById(
+        this.prismaService,
+        createProjectDto.authorId,
+        EntityType.USER,
+      );
 
       await this.prismaService.project.create({
         data: {
@@ -182,11 +181,11 @@ export class ProjectService {
         await this.cacheManager.get(findProjectKey);
 
       if (cachedProject) {
-        this.logger.debug(`Project cache hit.`);
+        this.logger.debug(`Project with the id ${projectId} cache hit.`);
 
         project = cachedProject;
       } else {
-        this.logger.debug(`Project cache missed.`);
+        this.logger.debug(`Project with the id ${projectId} cache missed.`);
 
         project = await this.prismaService.project.findFirst({
           where: { id: projectId },
@@ -303,11 +302,11 @@ export class ProjectService {
       );
 
       if (cachedProjectWork) {
-        this.logger.debug(`Project work cache hit.`);
+        this.logger.debug(`Project work with the id ${workId} cache hit.`);
 
         work = cachedProjectWork;
       } else {
-        this.logger.debug(`Project work cache missed.`);
+        this.logger.debug(`Project work with the id ${workId} cache missed.`);
 
         work = await this.prismaService.work.findFirst({
           where: { id: workId, projectId },

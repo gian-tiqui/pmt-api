@@ -10,12 +10,15 @@ import { FindAllDto } from 'src/project/dto/find-all.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import {
   clearKeys,
+  convertMentions,
   filterUsers,
+  findDataById,
   generateCacheKey,
   handleErrors,
   sanitizeUser,
 } from 'src/utils/functions';
 import {
+  EntityType,
   Identifier,
   LogMethod,
   LogType,
@@ -53,25 +56,9 @@ export class CommentService {
     const { mentions, ...createData } = createCommentDto;
 
     try {
-      const task = await this.prismaService.task.findFirst({
-        where: { id: createCommentDto.taskId },
-      });
+      findDataById(this.prismaService, createData.taskId, EntityType.TASK);
 
-      if (!task)
-        throw new NotFoundException(
-          `Task with the id ${createCommentDto.taskId} not found`,
-        );
-
-      let convertedMentions: { userId: number }[];
-
-      if (mentions) {
-        convertedMentions = mentions.split(',').map((id) => {
-          const parsedId = parseInt(id, 10);
-          if (isNaN(parsedId))
-            throw new BadRequestException(`Invalid mention ID: ${id}`);
-          return { userId: parsedId };
-        });
-      }
+      const convertedMentions: { userId: number }[] = convertMentions(mentions);
 
       const newComment = await this.prismaService.comment.create({
         data: {
@@ -170,11 +157,11 @@ export class CommentService {
         await this.cacheManager.get(findCommentCacheKey);
 
       if (cachedComment) {
-        this.logger.debug('Comment cache hit.');
+        this.logger.debug(`Comment with the id ${commentId} cache hit.`);
 
         comment = cachedComment;
       } else {
-        this.logger.debug('Comment cache missed.');
+        this.logger.debug(`Comment with the id ${commentId} cache missed.`);
 
         comment = await this.prismaService.comment.findFirst({
           where: { id: commentId },
@@ -286,8 +273,12 @@ export class CommentService {
       );
 
       if (cachedCommentMentionedUser) {
+        this.logger.log(`User with the id ${userId} cache hit.`);
+
         user = cachedCommentMentionedUser;
       } else {
+        this.logger.log(`User with the id ${userId} cache missed.`);
+
         user = await this.prismaService.user.findFirst({
           where: { id: userId },
         });
@@ -339,16 +330,7 @@ export class CommentService {
       if (!updatedCommentLog)
         throw new BadRequestException(`There was a problem in creating a log.`);
 
-      let convertedMentions: { userId: number }[];
-
-      if (mentions) {
-        convertedMentions = mentions.split(',').map((id) => {
-          const parsedId = parseInt(id, 10);
-          if (isNaN(parsedId))
-            throw new BadRequestException(`Invalid mention ID: ${id}`);
-          return { userId: parsedId };
-        });
-      }
+      const convertedMentions: { userId: number }[] = convertMentions(mentions);
 
       await this.prismaService.comment.update({
         where: { id: commentId, userId },
