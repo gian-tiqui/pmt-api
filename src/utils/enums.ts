@@ -22,6 +22,7 @@ enum LogType {
   USER = 6,
   WORK = 7,
   DIVISION = 8,
+  DEADLINE_EXTENSTION = 9,
 }
 
 enum EntityType {
@@ -33,6 +34,7 @@ enum EntityType {
   USER = 6,
   WORK = 7,
   DIVISION = 8,
+  DEADLINE_EXTENSTION = 9,
 }
 
 enum CacheConfig {
@@ -50,7 +52,6 @@ enum Identifier {
   DIVISION = 'single-division',
   MENTION = 'single-mention',
   USER = 'single-user',
-  DEADLINE_EXTENSIONS = 'single-deadline-extensions',
   LOG = 'single-log',
 }
 

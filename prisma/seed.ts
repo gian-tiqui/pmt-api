@@ -27,6 +27,8 @@ const seedEditTypesAndMethod = async () => {
     'task',
     'user',
     'work',
+    'division',
+    'deadline-extension',
   ];
 
   for (const logType of logTypes) {
@@ -54,9 +56,9 @@ const seedEditTypesAndMethod = async () => {
 
 const seedDivision = async () => {
   const divisions = [
-    { code: 'ADM', description: 'Admin' },
-    { code: 'NDS', description: 'Nursing Services Department' },
-    { code: 'ANC', description: 'Ancillary' },
+    { code: 'ADM', description: 'Admin Division' },
+    { code: 'ANC', description: 'Ancillary Division' },
+    { code: 'NSD', description: 'Nursing Services Division' },
   ];
 
   for (const division of divisions) {
@@ -71,16 +73,61 @@ const seedDivision = async () => {
 const seedDepartments = async () => {
   const departments = [
     { description: 'Human Resource', code: 'HR', divisionId: 1 },
-    { description: 'Quality Management', code: 'QM', divisionId: 1 },
-    { description: 'Information Technology', code: 'IT', divisionId: 1 },
+    {
+      description: 'Quality Management',
+      code: 'QM',
+      divisionId: 1,
+    },
+    {
+      description: 'Information Technology',
+      code: 'IT',
+      divisionId: 1,
+    },
     { description: 'Marketing', code: 'MRKT', divisionId: 1 },
     { description: 'Accounting', code: 'ACNT', divisionId: 1 },
     { description: 'Ancillary', code: 'ANC', divisionId: 1 },
-    { description: 'Nursing Services Division', code: 'NSD', divisionId: 2 },
+    {
+      description: 'Nursing Services Department',
+      code: 'NSD',
+      divisionId: 3,
+    },
     { description: 'Supply Chain', code: 'SC', divisionId: 1 },
-    { description: 'Support Services', code: 'SSD', divisionId: 1 },
-    { description: 'Customer Experience', code: 'CED', divisionId: 3 },
-    { description: 'Executive', code: 'EXEC', divisionId: 1 },
+    {
+      description: 'Support Services',
+      code: 'SSD',
+      divisionId: 1,
+    },
+    {
+      description: 'Customer Experience',
+      code: 'CED',
+      divisionId: 1,
+    },
+    { code: 'OR', description: 'Operating Room', divisionId: 3 },
+    { code: 'ER', description: 'Emergency Room', divisionId: 3 },
+    { code: 'NICU', description: 'Nicu', divisionId: 3 },
+    { code: 'DIA', description: 'Dialysis', divisionId: 3 },
+    { code: 'ICU', description: 'Icu', divisionId: 3 },
+    { code: 'ACU', description: 'Acu', divisionId: 3 },
+    {
+      code: 'GNU4F',
+      description: '4th Floor Ward',
+      divisionId: 3,
+    },
+    {
+      code: 'GNU5F',
+      description: '5th Floor Ward',
+      divisionId: 3,
+    },
+    { code: 'IMGN', description: 'Imaging', divisionId: 2 },
+    { code: 'CRD', description: 'Cardiology', divisionId: 2 },
+    { code: 'PULM', description: 'Pulmonary', divisionId: 2 },
+    {
+      code: 'PMR',
+      description: 'Physical, Medicine, and Rehab',
+      divisionId: 2,
+    },
+    { code: 'LAB', description: 'Laboratory', divisionId: 2 },
+    { code: 'DIET', description: 'Dietary', divisionId: 2 },
   ];
 
   for (const department of departments) {

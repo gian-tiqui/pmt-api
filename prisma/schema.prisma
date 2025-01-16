@@ -45,7 +45,6 @@ model User {
   createdWorks      Work[]
   tasks             Task[]
   authoredProjects  Project[]
-  deadlineExtensions DeadlineExtensions[]
   logs              Log[]
   mentions          Mention[]      @relation("MentionedIn")
   createdAt         DateTime       @default(now())
@@ -122,14 +121,6 @@ model Project {
   works        Work[]
   authorId     Int
   author       User      @relation(fields: [authorId], references: [id])
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-}
-
-model DeadlineExtensions {
-  id           Int       @id @default(autoincrement())
-  extendedBy   Int
-  user         User      @relation(fields: [extendedBy], references: [id])
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 }
