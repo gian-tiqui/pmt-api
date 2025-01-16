@@ -337,7 +337,11 @@ export class CommentService {
         data: { mentions: { create: convertedMentions }, ...updateData },
       });
 
-      const updateCommentCacheKey = `${this.namespace}${comment.id}`;
+      const updateCommentCacheKey = generateCacheKey(
+        Namespace.GENERAL,
+        Identifier.COMMENT,
+        { commentId },
+      );
 
       await this.cacheManager.set(updateCommentCacheKey, {
         ...comment,
@@ -382,7 +386,11 @@ export class CommentService {
         where: { id: commentId, userId },
       });
 
-      const deleteCommentCacheKey = `${this.namespace}${comment.id}`;
+      const deleteCommentCacheKey = generateCacheKey(
+        Namespace.GENERAL,
+        Identifier.COMMENT,
+        { commentId },
+      );
 
       await this.cacheManager.del(deleteCommentCacheKey);
 

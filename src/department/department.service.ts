@@ -173,26 +173,18 @@ export class DepartmentService {
   }
 
   async findDepartmentUsers(
-    deptId: number,
+    departmentId: number,
     query: FindAllDto,
   ): Promise<FindDepartmentUsers> {
-    const {
-      search,
-      departmentId,
-      divisionId,
-      offset,
-      limit,
-      sortBy,
-      sortOrder,
-    } = query;
+    const { search, offset, limit, sortBy, sortOrder } = query;
 
     try {
-      findDataById(this.prismaService, deptId, EntityType.DEPARTMENT);
+      findDataById(this.prismaService, departmentId, EntityType.DEPARTMENT);
 
       const findDepartmentUsersCacheKey: string = generateCacheKey(
         this.namespace,
         'findDepartmentUsers',
-        query,
+        { ...query, departmentId },
       );
 
       let users: User[], count: number;
@@ -216,8 +208,7 @@ export class DepartmentService {
               { lastName: { contains: search, mode: 'insensitive' } },
             ],
           }),
-          ...(departmentId && { departmentId }),
-          ...(divisionId && { divisionId }),
+          departmentId,
         };
         const orderBy = sortBy ? { [sortBy]: sortOrder || 'asc' } : undefined;
 
