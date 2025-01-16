@@ -378,7 +378,9 @@ export class ProjectService {
           await this.prismaService.log.create({
             data: {
               logMethodId: LogMethod.UPDATE,
-              logTypeId: LogType.PROJECT,
+              logTypeId: updateData.endDate
+                ? LogType.DEADLINE_EXTENSTION
+                : LogType.PROJECT,
               editedBy: userId,
               logs: getPreviousValues(project, updateProjectDto),
             },
