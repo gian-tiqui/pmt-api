@@ -600,7 +600,7 @@ export class TaskService {
       if (!task)
         throw new NotFoundException(`Task with the id ${taskId} not found.`);
 
-      if (!task.current)
+      if (!task.current && task.parentId)
         throw new BadRequestException(`The task cannot be edited.`);
 
       const user = await this.prismaService.user.findFirst({

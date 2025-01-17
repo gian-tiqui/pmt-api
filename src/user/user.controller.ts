@@ -8,6 +8,7 @@ import {
   Delete,
   ParseIntPipe,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -28,7 +29,9 @@ import {
   RemoveUser,
   UpdateUser,
 } from 'src/types/types';
+import { JwtAuthGuard } from 'src/auth/guards/auth.guard';
 
+@UseGuards(JwtAuthGuard)
 @Controller('user')
 export class UserController {
   constructor(private readonly userService: UserService) {}
@@ -110,6 +113,25 @@ export class UserController {
     @Param('projectId', ParseIntPipe) projectId: number,
   ): Promise<FindUserProject> {
     return this.userService.findUserProject(userId, projectId);
+  }
+
+  @Get(':userId/deadline-extension')
+  findUserDeadlineExtensions(
+    @Param('userId', ParseIntPipe) userId: number,
+    @Query() query: FindAllDto,
+  ) {
+    return this.userService.findUserDeadlineExtensions(userId, query);
+  }
+
+  @Get(':userId/deadline-extension/:deadlineExtensionId')
+  findUserDeadlineExtension(
+    @Param('userId', ParseIntPipe) userId: number,
+    @Param('deadlineExtensionId', ParseIntPipe) deadlineExtensionId: number,
+  ) {
+    return this.userService.findUserDeadlineExtension(
+      userId,
+      deadlineExtensionId,
+    );
   }
 
   @Patch(':userId')

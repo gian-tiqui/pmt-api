@@ -7,7 +7,11 @@ import {
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { getPreviousValues, handleErrors } from 'src/utils/functions';
+import {
+  getPreviousValues,
+  handleErrors,
+  sanitizeUser,
+} from 'src/utils/functions';
 import { FindAllDto } from 'src/project/dto/find-all.dto';
 import * as argon from 'argon2';
 import { LogMethod, LogType, PaginationDefault } from 'src/utils/enums';
@@ -87,6 +91,8 @@ export class UserService {
         take: limit || PaginationDefault.LIMIT,
       });
 
+      sanitizeUser(users);
+
       const count = await this.prismaService.user.count({
         where,
       });
@@ -109,6 +115,8 @@ export class UserService {
 
       if (!user)
         throw new NotFoundException(`User with the id ${userId} not found.`);
+
+      sanitizeUser([user]);
 
       return {
         message: 'User loaded successfully.',
@@ -471,6 +479,20 @@ export class UserService {
         message: 'Project of the user loaded successfully.',
         project,
       };
+    } catch (error) {
+      handleErrors(error, this.logger);
+    }
+  }
+
+  async findUserDeadlineExtensions(userId: number, query: FindAllDto) {
+    try {
+    } catch (error) {
+      handleErrors(error, this.logger);
+    }
+  }
+
+  async findUserDeadlineExtension(userId: number, deadlineExtensionId: number) {
+    try {
     } catch (error) {
       handleErrors(error, this.logger);
     }

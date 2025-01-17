@@ -1,5 +1,6 @@
 import { Type } from 'class-transformer';
 import {
+  IsBoolean,
   IsDate,
   IsInt,
   IsNotEmpty,
@@ -49,4 +50,8 @@ export class UpdateTaskDto {
   @IsNotEmpty()
   @IsInt()
   userId: number;
+
+  @IsOptional()
+  @IsBoolean()
+  current?: boolean;
 }

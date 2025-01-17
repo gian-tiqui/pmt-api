@@ -8,6 +8,7 @@ import {
   Delete,
   Query,
   ParseIntPipe,
+  UseGuards,
 } from '@nestjs/common';
 import { TaskService } from './task.service';
 import { CreateTaskDto } from './dto/create-task.dto';
@@ -27,7 +28,9 @@ import {
   RemoveTask,
   UpdateTask,
 } from 'src/types/types';
+import { JwtAuthGuard } from 'src/auth/guards/auth.guard';
 
+@UseGuards(JwtAuthGuard)
 @Controller('task')
 export class TaskController {
   constructor(private readonly taskService: TaskService) {}

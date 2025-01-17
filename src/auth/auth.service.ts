@@ -13,6 +13,14 @@ import * as argon from 'argon2';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { handleErrors } from '../utils/functions';
+import {
+  Login,
+  Logout,
+  Refresh,
+  Register,
+  SignRefreshToken,
+  SignToken,
+} from 'src/types/types';
 
 @Injectable()
 export class AuthService {
@@ -24,7 +32,7 @@ export class AuthService {
     private configService: ConfigService,
   ) {}
 
-  async register(registerDto: RegisterDto) {
+  async register(registerDto: RegisterDto): Promise<Register> {
     const { password, ...registerData } = registerDto;
     try {
       const hashedPassword = await argon.hash(password);
@@ -47,7 +55,7 @@ export class AuthService {
     }
   }
 
-  async login(loginDto: LoginDto) {
+  async login(loginDto: LoginDto): Promise<Login> {
     const { employeeId, password } = loginDto;
 
     try {
@@ -101,7 +109,7 @@ export class AuthService {
     }
   }
 
-  async refresh(refreshTokenDto: RefreshTokenDto) {
+  async refresh(refreshTokenDto: RefreshTokenDto): Promise<Refresh> {
     const { refreshToken } = refreshTokenDto;
 
     try {
@@ -134,7 +142,7 @@ export class AuthService {
     }
   }
 
-  async logout(userId: number) {
+  async logout(userId: number): Promise<Logout> {
     try {
       const logout = await this.prismaService.user.update({
         where: { id: userId },
@@ -160,7 +168,7 @@ export class AuthService {
     departmentId: number,
     description: string,
     code: string,
-  ): Promise<string> {
+  ): SignToken {
     return this.jwtService.signAsync({
       sub: userId,
       firstName,
@@ -172,7 +180,7 @@ export class AuthService {
     });
   }
 
-  private async signRefreshToken(userId: number): Promise<string> {
+  private async signRefreshToken(userId: number): SignRefreshToken {
     const refreshTokenSecret = this.configService.get<string>('RT_SECRET');
     const refreshTokenExpiration = this.configService.get<string>('RT_EXP');
 

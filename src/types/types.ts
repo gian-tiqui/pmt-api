@@ -282,6 +282,26 @@ type UpdateUser = UpdateBase;
 
 type RemoveUser = RemoveBase;
 
+type Register = CreateBase;
+
+type Login = {
+  message: string;
+  tokens: { accessToken: string; refreshToken: string };
+};
+
+type Refresh = {
+  message: string;
+  accessToken: string;
+};
+
+type Logout = {
+  message: string;
+};
+
+type SignToken = Promise<string>;
+
+type SignRefreshToken = Promise<string>;
+
 export type {
   CreateProject,
   FindProjects,
@@ -344,4 +364,10 @@ export type {
   FindUserProject,
   UpdateUser,
   RemoveUser,
+  Register,
+  Login,
+  Refresh,
+  Logout,
+  SignToken,
+  SignRefreshToken,
 };
