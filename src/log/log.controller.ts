@@ -8,12 +8,15 @@ import {
   Delete,
   Query,
   ParseIntPipe,
+  UseGuards,
 } from '@nestjs/common';
 import { LogService } from './log.service';
 import { CreateLogDto } from './dto/create-log.dto';
 import { UpdateLogDto } from './dto/update-log.dto';
 import { FindAllDto } from 'src/project/dto/find-all.dto';
+import { JwtAuthGuard } from 'src/auth/guards/auth.guard';
 
+@UseGuards(JwtAuthGuard)
 @Controller('log')
 export class LogController {
   constructor(private readonly logService: LogService) {}

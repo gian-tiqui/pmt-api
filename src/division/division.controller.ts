@@ -8,6 +8,7 @@ import {
   Delete,
   ParseIntPipe,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import { DivisionService } from './division.service';
 import { CreateDivisionDto } from './dto/create-division.dto';
@@ -25,7 +26,9 @@ import {
   UpdateDivision,
 } from 'src/types/types';
 import { RateLimit } from 'nestjs-rate-limiter';
+import { JwtAuthGuard } from 'src/auth/guards/auth.guard';
 
+@UseGuards(JwtAuthGuard)
 @Controller('division')
 export class DivisionController {
   constructor(private readonly divisionService: DivisionService) {}
