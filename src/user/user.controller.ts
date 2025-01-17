@@ -116,13 +116,20 @@ export class UserController {
   findUserDeadlineExtensions(
     @Param('userId', ParseIntPipe) userId: number,
     @Query() query: FindAllDto,
-  ) {}
+  ) {
+    return this.userService.findUserDeadlineExtensions(userId, query);
+  }
 
   @Get(':userId/deadline-extension/:deadlineExtensionId')
   findUserDeadlineExtension(
     @Param('userId', ParseIntPipe) userId: number,
     @Param('deadlineExtensionId', ParseIntPipe) deadlineExtensionId: number,
-  ) {}
+  ) {
+    return this.userService.findUserDeadlineExtension(
+      userId,
+      deadlineExtensionId,
+    );
+  }
 
   @Patch(':userId')
   updateUser(

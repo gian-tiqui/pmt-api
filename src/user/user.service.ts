@@ -484,6 +484,20 @@ export class UserService {
     }
   }
 
+  async findUserDeadlineExtensions(userId: number, query: FindAllDto) {
+    try {
+    } catch (error) {
+      handleErrors(error, this.logger);
+    }
+  }
+
+  async findUserDeadlineExtension(userId: number, deadlineExtensionId: number) {
+    try {
+    } catch (error) {
+      handleErrors(error, this.logger);
+    }
+  }
+
   async updateUser(
     userId: number,
     updateUserDto: UpdateUserDto,
