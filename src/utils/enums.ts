@@ -38,8 +38,8 @@ enum EntityType {
 }
 
 enum CacheConfig {
-  TTL = 1000000,
-  MAX = 100,
+  TTL = 1,
+  MAX = 0,
 }
 
 enum Identifier {

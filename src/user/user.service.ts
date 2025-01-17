@@ -133,13 +133,15 @@ export class UserService {
       if (!user)
         throw new NotFoundException(`User with the id ${userId} not found.`);
 
+      const where: object = {
+        userId,
+        ...(search && {
+          AND: [{ message: { contains: search, mode: 'insensitive' } }],
+        }),
+      };
+
       const comments = await this.prismaService.comment.findMany({
-        where: {
-          userId,
-          ...(search && {
-            AND: [{ message: { contains: search, mode: 'insensitive' } }],
-          }),
-        },
+        where,
 
         orderBy,
         skip: offset || PaginationDefault.OFFSET,
@@ -147,12 +149,7 @@ export class UserService {
       });
 
       const count = await this.prismaService.comment.count({
-        where: {
-          userId,
-          ...(search && {
-            AND: [{ message: { contains: search, mode: 'insensitive' } }],
-          }),
-        },
+        where,
       });
 
       return {
@@ -170,16 +167,17 @@ export class UserService {
     commentId: number,
   ): Promise<FindUserComment> {
     try {
-      const user = await this.prismaService.user.findFirst({
-        where: { id: userId },
-      });
+      const [user, comment] = await Promise.all([
+        this.prismaService.user.findFirst({
+          where: { id: userId },
+        }),
+        this.prismaService.comment.findFirst({
+          where: { id: commentId, userId },
+        }),
+      ]);
 
       if (!user)
         throw new NotFoundException(`User with the id ${userId} not found.`);
-
-      const comment = await this.prismaService.comment.findFirst({
-        where: { id: commentId, userId },
-      });
 
       if (!comment)
         throw new NotFoundException(
@@ -201,52 +199,42 @@ export class UserService {
   ): Promise<FindUserWorks> {
     const { dateWithin, offset, limit, search, sortBy, sortOrder, type } =
       query;
-    const orderBy = sortBy ? { [sortBy]: sortOrder || 'asc' } : undefined;
-    const options = {
-      ...(dateWithin && {
-        AND: [
-          { startDate: { gte: dateWithin } },
-          { endDate: { lte: dateWithin } },
-        ],
-      }),
-      ...(type && { type }),
-    };
 
     try {
       const user = await this.prismaService.user.findFirst({
         where: { id: userId },
       });
+      const where: object = {
+        authorId: userId,
+        ...(dateWithin && {
+          AND: [
+            { startDate: { gte: dateWithin } },
+            { endDate: { lte: dateWithin } },
+          ],
+        }),
+        ...(type && { type }),
+        ...(search && {
+          OR: [
+            { name: { contains: search, mode: 'insensitive' } },
+            { description: { contains: search, mode: 'insensitive' } },
+          ],
+        }),
+      };
+
+      const orderBy = sortBy ? { [sortBy]: sortOrder || 'asc' } : undefined;
 
       if (!user)
         throw new NotFoundException(`User with the id ${userId} not found.`);
 
       const works = await this.prismaService.work.findMany({
-        where: {
-          authorId: userId,
-          ...options,
-          ...(search && {
-            OR: [
-              { name: { contains: search, mode: 'insensitive' } },
-              { description: { contains: search, mode: 'insensitive' } },
-            ],
-          }),
-        },
+        where,
         orderBy,
         skip: offset || PaginationDefault.OFFSET,
         take: limit || PaginationDefault.LIMIT,
       });
 
       const count = await this.prismaService.work.count({
-        where: {
-          authorId: userId,
-          ...options,
-          ...(search && {
-            OR: [
-              { name: { contains: search, mode: 'insensitive' } },
-              { description: { contains: search, mode: 'insensitive' } },
-            ],
-          }),
-        },
+        where,
       });
 
       return {
