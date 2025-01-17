@@ -255,7 +255,7 @@ export class TaskService {
       const findTaskSubtasksCacheKey = generateCacheKey(
         this.namespace,
         'findTaskSubtasks',
-        query,
+        { ...query, taskId },
       );
       const cachedTaskSubtasks: { subTasks: Task[]; count: number } =
         await this.cacheManager.get(findTaskSubtasksCacheKey);
@@ -372,7 +372,7 @@ export class TaskService {
     const findTaskUsersCacheKey = generateCacheKey(
       this.namespace,
       'findTaskUsers',
-      query,
+      { ...query, taskId },
     );
 
     try {
@@ -479,7 +479,7 @@ export class TaskService {
     const findTaskCommentsCacheKey: string = generateCacheKey(
       this.namespace,
       'findTaskComments',
-      query,
+      { ...query, taskId },
     );
 
     try {

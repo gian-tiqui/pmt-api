@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ProjectModule } from './project/project.module';
 import { WorkModule } from './work/work.module';
 import { TaskModule } from './task/task.module';
@@ -13,6 +13,7 @@ import { AuthModule } from './auth/auth.module';
 import { CacheModule } from '@nestjs/cache-manager';
 import { DivisionModule } from './division/division.module';
 import { CacheConfig } from './utils/enums';
+import { LoggerMiddleware } from './middleware/logger.middleware';
 
 @Module({
   imports: [
@@ -41,4 +42,8 @@ import { CacheConfig } from './utils/enums';
     },
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(LoggerMiddleware).forRoutes('*');
+  }
+}

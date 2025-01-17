@@ -294,7 +294,7 @@ export class DivisionService {
       const findDivisionDepartmentsCacheKey: string = generateCacheKey(
         this.namespace,
         'findDivisionDepartments',
-        query,
+        { ...query, divisionId },
       );
 
       let departments: Department[], count: number;

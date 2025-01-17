@@ -159,7 +159,7 @@ const seedUsers = async () => {
     },
     {
       firstName: 'Catherine',
-      lastName: 'Carparas',
+      lastName: 'Caparas',
       deptId: 9,
       divisionId: 1,
       employeeId: 1012,
@@ -210,7 +210,7 @@ const seedUsers = async () => {
       firstName: 'Ivy',
       lastName: 'Tanamal-Perez',
       deptId: 9,
-      divisionId: 1,
+      divisionId: 2,
       employeeId: 1019,
     },
     {
@@ -231,14 +231,14 @@ const seedUsers = async () => {
       firstName: 'Armalyn',
       lastName: 'Mariano',
       deptId: 6,
-      divisionId: 1,
+      divisionId: 2,
       employeeId: 1022,
     },
     {
       firstName: 'Herbert',
       lastName: 'Aquino',
       deptId: 7,
-      divisionId: 1,
+      divisionId: 3,
       employeeId: 1023,
     },
   ];
@@ -251,8 +251,8 @@ const seedUsers = async () => {
     await prismaClient.user.create({
       data: {
         email: `${user.firstName.toLowerCase()}${user.lastName.toLowerCase()}@westlakemed.com.ph`,
-        firstName: user.firstName.toLowerCase(),
-        lastName: user.lastName.toLowerCase(),
+        firstName: user.firstName,
+        lastName: user.lastName,
         departmentId: user.deptId,
         divisionId: user.divisionId,
         password: hashedPassword,

@@ -10,11 +10,11 @@ import { CreateWorkDto } from 'src/work/dto/create-work.dto';
 import { UpdateWorkDto } from 'src/work/dto/update-work.dto';
 import { CreateTaskDto } from 'src/task/dto/create-task.dto';
 import { UpdateTaskDto } from 'src/task/dto/update-task.dto';
-import { EntityType, PaginationDefault } from './enums';
+import { EntityType, LogMethod, PaginationDefault } from './enums';
 import { Cache } from '@nestjs/cache-manager';
 import { PrismaService } from 'src/prisma/prisma.service';
 
-const getPreviousValues = (original, updates) => {
+const getPreviousValues = (original: object, updates: object): object => {
   const changes = {};
 
   for (const key in updates) {
@@ -26,7 +26,11 @@ const getPreviousValues = (original, updates) => {
   return changes;
 };
 
-const handleErrors = (error: any, logger: Logger, customMessage?: string) => {
+const handleErrors = (
+  error: any,
+  logger: Logger,
+  customMessage?: string,
+): void => {
   logger.error(error.message, error.stack);
 
   if (
@@ -58,7 +62,7 @@ const firstDateGreaterThanSecondDate = (
   endDate: Date,
   name: string,
   secondName?: string,
-) => {
+): void => {
   if (startDate >= endDate) {
     throw new BadRequestException(
       `${name} end date must be strictly later than start date ${secondName && `of ${secondName}`}.`,
@@ -85,7 +89,7 @@ const validateParentAndChildDates = (
     | UpdateTaskDto,
   childType: string,
   parentType: string,
-) => {
+): void => {
   if (parent.startDate > child.startDate)
     throw new BadRequestException(
       `Start date of a ${childType} must be later or same as the start date of the ${parentType}.`,
@@ -157,7 +161,7 @@ const clearKeys = async (
   }
 };
 
-const sanitizeUser = (users: User[]) => {
+const sanitizeUser = (users: User[]): void => {
   users.map((user) => {
     delete user.password;
     delete user.refreshToken;
@@ -168,7 +172,7 @@ const findDataById = async (
   prismaService: PrismaService,
   id: number,
   entityType: number,
-) => {
+): Promise<void> => {
   switch (entityType) {
     case EntityType.COMMENT:
       const comment = await prismaService.comment.findFirst({
@@ -221,7 +225,7 @@ const findDataById = async (
   }
 };
 
-const convertMentions = (mentionsString: string) => {
+const convertMentions = (mentionsString: string): { userId: number }[] => {
   if (mentionsString) {
     return mentionsString.split(',').map((id) => {
       const parsedId = parseInt(id, 10);
@@ -232,7 +236,23 @@ const convertMentions = (mentionsString: string) => {
   }
 };
 
+const updateCache = (
+  updatedData: object,
+  entityType: number,
+  methodId: number,
+) => {
+  switch (methodId) {
+    case LogMethod.CREATE:
+      break;
+    case LogMethod.UPDATE:
+      break;
+    case LogMethod.DELETE:
+      break;
+  }
+};
+
 export {
+  updateCache,
   convertMentions,
   findDataById,
   sanitizeUser,

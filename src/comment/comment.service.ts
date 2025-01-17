@@ -201,7 +201,7 @@ export class CommentService {
     const findCommentMentionedUsersCacheKey = generateCacheKey(
       this.namespace,
       'findCommentMentionedUsers',
-      query,
+      { ...query, commentId },
     );
 
     const orderBy = sortBy ? { [sortBy]: sortOrder || 'asc' } : undefined;
