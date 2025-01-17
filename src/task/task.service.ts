@@ -23,7 +23,6 @@ import {
   Identifier,
   LogMethod,
   LogType,
-  Namespace,
   PaginationDefault,
 } from 'src/utils/enums';
 import { Cache } from 'cache-manager';
@@ -194,7 +193,7 @@ export class TaskService {
     try {
       let task: Task;
       const findTaskCacheKey: string = generateCacheKey(
-        Namespace.GENERAL,
+        this.namespace,
         Identifier.TASK,
         { taskId },
       );
@@ -317,7 +316,7 @@ export class TaskService {
     subTaskId: number,
   ): Promise<FindTaskSubtask> {
     const findTaskSubtaskCacheKey = generateCacheKey(
-      Namespace.GENERAL,
+      this.namespace,
       Identifier.TASK,
       { subTaskId },
     );
@@ -426,7 +425,7 @@ export class TaskService {
 
   async findTaskUser(taskId: number, userId: number): Promise<FindTaskUser> {
     const findTaskUserCacheKey: string = generateCacheKey(
-      Namespace.GENERAL,
+      this.namespace,
       Identifier.USER,
       { userId },
     );
@@ -538,7 +537,7 @@ export class TaskService {
     commentId: number,
   ): Promise<FindTaskComment> {
     const findTaskCommentCacheKey = generateCacheKey(
-      Namespace.GENERAL,
+      this.namespace,
       Identifier.COMMENT,
       { commentId },
     );
@@ -550,7 +549,7 @@ export class TaskService {
       );
 
       if (cachedComment) {
-        this.logger.debug(`Task Comment with id ${commentId} cache missed.`);
+        this.logger.debug(`Task Comment with id ${commentId} cache hit.`);
 
         comment = cachedComment;
       } else {
@@ -660,7 +659,7 @@ export class TaskService {
         );
 
       const updateTaskCacheKey: string = generateCacheKey(
-        Namespace.GENERAL,
+        this.namespace,
         Identifier.TASK,
         { taskId },
       );
@@ -700,7 +699,7 @@ export class TaskService {
       await this.prismaService.task.delete({ where: { id: taskId } });
 
       const deleteTaskCacheKey: string = generateCacheKey(
-        Namespace.GENERAL,
+        this.namespace,
         Identifier.TASK,
         { taskId },
       );

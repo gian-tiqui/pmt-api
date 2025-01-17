@@ -11,6 +11,21 @@ import { getPreviousValues, handleErrors } from 'src/utils/functions';
 import { FindAllDto } from 'src/project/dto/find-all.dto';
 import * as argon from 'argon2';
 import { LogMethod, LogType, PaginationDefault } from 'src/utils/enums';
+import {
+  CreateUser,
+  FindUser,
+  FindUserComment,
+  FindUserComments,
+  FindUserProject,
+  FindUserProjects,
+  FindUsers,
+  FindUserTask,
+  FindUserTasks,
+  FindUserWork,
+  FindUserWorks,
+  RemoveUser,
+  UpdateUser,
+} from 'src/types/types';
 
 @Injectable()
 export class UserService {
@@ -18,7 +33,7 @@ export class UserService {
 
   constructor(private readonly prismaService: PrismaService) {}
 
-  async createUser(createUserDto: CreateUserDto) {
+  async createUser(createUserDto: CreateUserDto): Promise<CreateUser> {
     try {
       const hashedPassword = await argon.hash(createUserDto.password);
 
@@ -39,7 +54,7 @@ export class UserService {
     }
   }
 
-  async findUsers(query: FindAllDto) {
+  async findUsers(query: FindAllDto): Promise<FindUsers> {
     const {
       search,
       departmentId,
@@ -86,7 +101,7 @@ export class UserService {
     }
   }
 
-  async findUser(userId: number) {
+  async findUser(userId: number): Promise<FindUser> {
     try {
       const user = await this.prismaService.user.findFirst({
         where: { id: userId },
@@ -104,7 +119,10 @@ export class UserService {
     }
   }
 
-  async findUserComments(userId: number, query: FindAllDto) {
+  async findUserComments(
+    userId: number,
+    query: FindAllDto,
+  ): Promise<FindUserComments> {
     const { search, offset, limit, sortOrder, sortBy } = query;
     const orderBy = sortBy ? { [sortBy]: sortOrder || 'asc' } : undefined;
     try {
@@ -147,7 +165,10 @@ export class UserService {
     }
   }
 
-  async findUserComment(userId: number, commentId: number) {
+  async findUserComment(
+    userId: number,
+    commentId: number,
+  ): Promise<FindUserComment> {
     try {
       const user = await this.prismaService.user.findFirst({
         where: { id: userId },
@@ -174,7 +195,10 @@ export class UserService {
     }
   }
 
-  async findUserWorks(userId: number, query: FindAllDto) {
+  async findUserWorks(
+    userId: number,
+    query: FindAllDto,
+  ): Promise<FindUserWorks> {
     const { dateWithin, offset, limit, search, sortBy, sortOrder, type } =
       query;
     const orderBy = sortBy ? { [sortBy]: sortOrder || 'asc' } : undefined;
@@ -235,7 +259,7 @@ export class UserService {
     }
   }
 
-  async findUserWork(userId: number, workId: number) {
+  async findUserWork(userId: number, workId: number): Promise<FindUserWork> {
     try {
       const user = await this.prismaService.user.findFirst({
         where: { id: userId },
@@ -262,7 +286,10 @@ export class UserService {
     }
   }
 
-  async findUserTasks(userId: number, query: FindAllDto) {
+  async findUserTasks(
+    userId: number,
+    query: FindAllDto,
+  ): Promise<FindUserTasks> {
     const {
       limit,
       offset,
@@ -333,7 +360,7 @@ export class UserService {
     }
   }
 
-  async findUserTask(userId: number, taskId: number) {
+  async findUserTask(userId: number, taskId: number): Promise<FindUserTask> {
     try {
       const task = await this.prismaService.task.findFirst({
         where: {
@@ -356,7 +383,10 @@ export class UserService {
     }
   }
 
-  async findUserProjects(userId: number, query: FindAllDto) {
+  async findUserProjects(
+    userId: number,
+    query: FindAllDto,
+  ): Promise<FindUserProjects> {
     const {
       status,
       authorId,
@@ -432,7 +462,10 @@ export class UserService {
     }
   }
 
-  async findUserProject(userId: number, projectId: number) {
+  async findUserProject(
+    userId: number,
+    projectId: number,
+  ): Promise<FindUserProject> {
     try {
       const project = await this.prismaService.project.findFirst({
         where: {
@@ -455,7 +488,10 @@ export class UserService {
     }
   }
 
-  async updateUser(userId: number, updateUserDto: UpdateUserDto) {
+  async updateUser(
+    userId: number,
+    updateUserDto: UpdateUserDto,
+  ): Promise<UpdateUser> {
     const { userId: editedBy, ...updateData } = updateUserDto;
 
     try {
@@ -493,7 +529,7 @@ export class UserService {
     }
   }
 
-  async removeUser(userId: number, editedBy: number) {
+  async removeUser(userId: number, editedBy: number): Promise<RemoveUser> {
     try {
       const user = await this.prismaService.user.findFirst({
         where: { id: userId },

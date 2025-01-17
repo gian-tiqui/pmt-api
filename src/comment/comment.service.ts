@@ -22,7 +22,6 @@ import {
   Identifier,
   LogMethod,
   LogType,
-  Namespace,
   PaginationDefault,
 } from 'src/utils/enums';
 import { Inject } from '@nestjs/common';
@@ -154,7 +153,7 @@ export class CommentService {
 
   async findComment(commentId: number): Promise<FindComment> {
     const findCommentCacheKey = generateCacheKey(
-      Namespace.GENERAL,
+      this.namespace,
       Identifier.COMMENT,
       { commentId },
     );
@@ -272,7 +271,7 @@ export class CommentService {
 
       let user: User;
       const cachedCommentMentionedUserCacheKey = generateCacheKey(
-        Namespace.GENERAL,
+        this.namespace,
         Identifier.USER,
         { userId },
       );
@@ -282,11 +281,15 @@ export class CommentService {
       );
 
       if (cachedCommentMentionedUser) {
-        this.logger.debug(`User with the id ${userId} cache hit.`);
+        this.logger.debug(
+          `Mentioned User with the id ${userId} in comment ${commentId} cache hit.`,
+        );
 
         user = cachedCommentMentionedUser;
       } else {
-        this.logger.debug(`User with the id ${userId} cache missed.`);
+        this.logger.debug(
+          `Mentioned User with the id ${userId} in comment ${commentId} cache missed.`,
+        );
 
         user = await this.prismaService.user.findFirst({
           where: { id: userId },
@@ -347,7 +350,7 @@ export class CommentService {
       });
 
       const updateCommentCacheKey = generateCacheKey(
-        Namespace.GENERAL,
+        this.namespace,
         Identifier.COMMENT,
         { commentId },
       );
@@ -396,7 +399,7 @@ export class CommentService {
       });
 
       const deleteCommentCacheKey = generateCacheKey(
-        Namespace.GENERAL,
+        this.namespace,
         Identifier.COMMENT,
         { commentId },
       );

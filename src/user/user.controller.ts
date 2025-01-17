@@ -13,23 +13,38 @@ import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { FindAllDto } from 'src/project/dto/find-all.dto';
+import {
+  CreateUser,
+  FindUser,
+  FindUserComment,
+  FindUserComments,
+  FindUserProject,
+  FindUserProjects,
+  FindUsers,
+  FindUserTask,
+  FindUserTasks,
+  FindUserWork,
+  FindUserWorks,
+  RemoveUser,
+  UpdateUser,
+} from 'src/types/types';
 
 @Controller('user')
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Post()
-  createUser(@Body() createUserDto: CreateUserDto) {
+  createUser(@Body() createUserDto: CreateUserDto): Promise<CreateUser> {
     return this.userService.createUser(createUserDto);
   }
 
   @Get()
-  findUsers(@Query() query: FindAllDto) {
+  findUsers(@Query() query: FindAllDto): Promise<FindUsers> {
     return this.userService.findUsers(query);
   }
 
   @Get(':userId')
-  findUser(@Param('userId', ParseIntPipe) userId: number) {
+  findUser(@Param('userId', ParseIntPipe) userId: number): Promise<FindUser> {
     return this.userService.findUser(userId);
   }
 
@@ -37,7 +52,7 @@ export class UserController {
   findUserComments(
     @Param('userId', ParseIntPipe) userId: number,
     @Query() query: FindAllDto,
-  ) {
+  ): Promise<FindUserComments> {
     return this.userService.findUserComments(userId, query);
   }
 
@@ -45,7 +60,7 @@ export class UserController {
   findUserComment(
     @Param('userId', ParseIntPipe) userId: number,
     @Param('commentId', ParseIntPipe) commentId: number,
-  ) {
+  ): Promise<FindUserComment> {
     return this.userService.findUserComment(userId, commentId);
   }
 
@@ -53,7 +68,7 @@ export class UserController {
   findUserWorks(
     @Param('userId', ParseIntPipe) userId: number,
     @Query() query: FindAllDto,
-  ) {
+  ): Promise<FindUserWorks> {
     return this.userService.findUserWorks(userId, query);
   }
 
@@ -61,7 +76,7 @@ export class UserController {
   findUserWork(
     @Param('userId', ParseIntPipe) userId: number,
     @Param('workId', ParseIntPipe) workId: number,
-  ) {
+  ): Promise<FindUserWork> {
     return this.userService.findUserWork(userId, workId);
   }
 
@@ -69,7 +84,7 @@ export class UserController {
   findUserTasks(
     @Param('userId', ParseIntPipe) userId: number,
     @Query() query: FindAllDto,
-  ) {
+  ): Promise<FindUserTasks> {
     return this.userService.findUserTasks(userId, query);
   }
 
@@ -77,7 +92,7 @@ export class UserController {
   findUserTask(
     @Param('userId', ParseIntPipe) userId: number,
     @Param('taskId', ParseIntPipe) taskId: number,
-  ) {
+  ): Promise<FindUserTask> {
     return this.userService.findUserTask(userId, taskId);
   }
 
@@ -85,7 +100,7 @@ export class UserController {
   findUserProjects(
     @Param('userId', ParseIntPipe) userId: number,
     @Query() query: FindAllDto,
-  ) {
+  ): Promise<FindUserProjects> {
     return this.userService.findUserProjects(userId, query);
   }
 
@@ -93,7 +108,7 @@ export class UserController {
   findUserProject(
     @Param('userId', ParseIntPipe) userId: number,
     @Param('projectId', ParseIntPipe) projectId: number,
-  ) {
+  ): Promise<FindUserProject> {
     return this.userService.findUserProject(userId, projectId);
   }
 
@@ -101,7 +116,7 @@ export class UserController {
   updateUser(
     @Param('userId', ParseIntPipe) userId: number,
     @Body() updateUserDto: UpdateUserDto,
-  ) {
+  ): Promise<UpdateUser> {
     return this.userService.updateUser(userId, updateUserDto);
   }
 
@@ -109,7 +124,7 @@ export class UserController {
   removeUser(
     @Param('userId', ParseIntPipe) userId: number,
     @Query('editedBy', ParseIntPipe) editedBy,
-  ) {
+  ): Promise<RemoveUser> {
     return this.userService.removeUser(userId, editedBy);
   }
 }

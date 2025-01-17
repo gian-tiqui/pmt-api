@@ -22,7 +22,6 @@ import {
   Identifier,
   LogMethod,
   LogType,
-  Namespace,
   PaginationDefault,
 } from 'src/utils/enums';
 import { Cache } from 'cache-manager';
@@ -169,7 +168,7 @@ export class ProjectService {
     try {
       let project: Project;
       const findProjectKey: string = generateCacheKey(
-        Namespace.GENERAL,
+        this.namespace,
         Identifier.PROJECT,
         {
           projectId,
@@ -289,7 +288,7 @@ export class ProjectService {
     workId: number,
   ): Promise<FindProjectWork> {
     const findProjectWorkCacheKey = generateCacheKey(
-      Namespace.GENERAL,
+      this.namespace,
       Identifier.WORK,
       { workId },
     );
@@ -395,7 +394,7 @@ export class ProjectService {
         );
 
       const updateProjectCacheKey = generateCacheKey(
-        Namespace.GENERAL,
+        this.namespace,
         Identifier.PROJECT,
         {
           projectId,
@@ -459,7 +458,7 @@ export class ProjectService {
         );
 
       const deleteProjectCacheKey = generateCacheKey(
-        Namespace.GENERAL,
+        this.namespace,
         Identifier.PROJECT,
         {
           projectId,
