@@ -17,6 +17,7 @@ import { LoggerMiddleware } from './middleware/logger.middleware';
 
 @Module({
   imports: [
+    // Cache Removal starts here
     CacheModule.register({
       ttl: CacheConfig.TTL,
       max: CacheConfig.MAX,

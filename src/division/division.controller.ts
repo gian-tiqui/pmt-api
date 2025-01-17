@@ -115,12 +115,15 @@ export class DivisionController {
     duration: 60,
     errorMessage: 'Please wait before loading the department of a division.',
   })
-  @Get(':divisionId/user/:deptId')
+  @Get(':divisionId/user/:departmentId')
   findDivisionDepartment(
     @Param('divisionId', ParseIntPipe) divisionId: number,
-    @Param('deptId', ParseIntPipe) deptId: number,
+    @Param('departmentId', ParseIntPipe) departmentId: number,
   ): Promise<FindDivisionDepartment> {
-    return this.divisionService.findDivisionDepartment(divisionId, deptId);
+    return this.divisionService.findDivisionDepartment(
+      divisionId,
+      departmentId,
+    );
   }
 
   @RateLimit({

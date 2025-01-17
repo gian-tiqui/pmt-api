@@ -157,7 +157,7 @@ export class AuthService {
     firstName: string,
     lastName: string,
     email: string,
-    deptId: number,
+    departmentId: number,
     description: string,
     code: string,
   ): Promise<string> {
@@ -166,7 +166,7 @@ export class AuthService {
       firstName,
       lastName,
       email,
-      deptId,
+      departmentId,
       description,
       code,
     });

@@ -221,6 +221,67 @@ type UpdateDivision = UpdateBase;
 
 type RemoveDivision = RemoveBase;
 
+type CreateUser = CreateBase;
+
+type FindUsers = {
+  message: string;
+  count: number;
+  users: User[];
+};
+
+type FindUser = {
+  message: string;
+  user: User;
+};
+
+type FindUserComments = {
+  message: string;
+  count: number;
+  comments: Comment[];
+};
+
+type FindUserComment = {
+  message: string;
+  comment: Comment;
+};
+
+type FindUserWorks = {
+  message: string;
+  count: number;
+  works: Work[];
+};
+
+type FindUserWork = {
+  message: string;
+  work: Work;
+};
+
+type FindUserTasks = {
+  message: string;
+  count: number;
+  tasks: Task[];
+};
+
+type FindUserTask = {
+  message: string;
+  task: Task;
+};
+
+type FindUserProjects = {
+  message: string;
+  count: number;
+  projects: Project[];
+};
+
+type FindUserProject = {
+  message: string;
+  project: Project;
+};
+
+type UpdateUser = UpdateBase;
+
+type RemoveUser = RemoveBase;
+
 export type {
   CreateProject,
   FindProjects,
@@ -270,4 +331,17 @@ export type {
   FindDivisionDepartment,
   UpdateDivision,
   RemoveDivision,
+  CreateUser,
+  FindUsers,
+  FindUser,
+  FindUserComments,
+  FindUserComment,
+  FindUserWorks,
+  FindUserWork,
+  FindUserTasks,
+  FindUserTask,
+  FindUserProjects,
+  FindUserProject,
+  UpdateUser,
+  RemoveUser,
 };

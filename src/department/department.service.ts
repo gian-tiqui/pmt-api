@@ -21,7 +21,6 @@ import {
   Identifier,
   LogMethod,
   LogType,
-  Namespace,
   PaginationDefault,
 } from 'src/utils/enums';
 import { Department, User } from '@prisma/client';
@@ -135,12 +134,12 @@ export class DepartmentService {
     }
   }
 
-  async findDepartment(deptId: number): Promise<FindDepartment> {
+  async findDepartment(departmentId: number): Promise<FindDepartment> {
     try {
       const findDepartmentCacheKey: string = generateCacheKey(
-        Namespace.GENERAL,
+        this.namespace,
         Identifier.DEPARTMENT,
-        { deptId },
+        { departmentId },
       );
       let department: Department;
       const cachedDepartment: Department = await this.cacheManager.get(
@@ -148,19 +147,21 @@ export class DepartmentService {
       );
 
       if (cachedDepartment) {
-        this.logger.debug(`Department with the id ${deptId} cache hit.`);
+        this.logger.debug(`Department with the id ${departmentId} cache hit.`);
 
         department = cachedDepartment;
       } else {
-        this.logger.debug(`Department with the id ${deptId} cache missed.`);
+        this.logger.debug(
+          `Department with the id ${departmentId} cache missed.`,
+        );
 
         department = await this.prismaService.department.findFirst({
-          where: { id: deptId },
+          where: { id: departmentId },
         });
 
         if (!department)
           throw new NotFoundException(
-            `Department with the id ${deptId} not found.`,
+            `Department with the id ${departmentId} not found.`,
           );
 
         await this.cacheManager.set(findDepartmentCacheKey, department);
@@ -243,12 +244,12 @@ export class DepartmentService {
   }
 
   async findDepartmentUser(
-    deptId: number,
+    departmentId: number,
     userId: number,
   ): Promise<FindDepartmentUser> {
     try {
       const findDepartmentUserCacheKey: string = generateCacheKey(
-        Namespace.GENERAL,
+        this.namespace,
         Identifier.USER,
         { userId },
       );
@@ -269,7 +270,7 @@ export class DepartmentService {
         );
 
         user = await this.prismaService.user.findFirst({
-          where: { id: userId, departmentId: deptId },
+          where: { id: userId, departmentId: departmentId },
         });
 
         if (!user)
@@ -290,17 +291,19 @@ export class DepartmentService {
   }
 
   async updateDepartment(
-    deptId: number,
+    departmentId: number,
     updateDepartmentDto: UpdateDepartmentDto,
   ): Promise<UpdateDepartment> {
     const { userId, ...updateData } = updateDepartmentDto;
     try {
       const department = await this.prismaService.department.findFirst({
-        where: { id: deptId },
+        where: { id: departmentId },
       });
 
       if (!department)
-        throw new NotFoundException(`Department with the ${deptId} not found.`);
+        throw new NotFoundException(
+          `Department with the ${departmentId} not found.`,
+        );
 
       const updatedDepartmentLog = await this.prismaService.log.create({
         data: {
@@ -315,14 +318,14 @@ export class DepartmentService {
         throw new BadRequestException('There was a problem in creating a log.');
 
       await this.prismaService.department.update({
-        where: { id: deptId },
+        where: { id: departmentId },
         data: updateData,
       });
 
       const updateDepartmentCacheKey: string = generateCacheKey(
-        Namespace.GENERAL,
+        this.namespace,
         Identifier.DEPARTMENT,
-        { deptId },
+        { departmentId },
       );
 
       await this.cacheManager.set(updateDepartmentCacheKey, {
@@ -337,17 +340,17 @@ export class DepartmentService {
   }
 
   async removeDepartment(
-    deptId: number,
+    departmentId: number,
     userId: number,
   ): Promise<RemoveDepartment> {
     try {
       const department = await this.prismaService.department.findFirst({
-        where: { id: deptId },
+        where: { id: departmentId },
       });
 
       if (!department)
         throw new NotFoundException(
-          `Department with the id ${deptId} not found.`,
+          `Department with the id ${departmentId} not found.`,
         );
 
       await findDataById(this.prismaService, userId, EntityType.USER);
@@ -364,13 +367,15 @@ export class DepartmentService {
       if (!deletedDepartmentLog)
         throw new BadRequestException(`There was a problem in creating a log`);
 
-      await this.prismaService.department.delete({ where: { id: deptId } });
+      await this.prismaService.department.delete({
+        where: { id: departmentId },
+      });
 
       const deleteDepartmentCacheKey = generateCacheKey(
-        Namespace.GENERAL,
+        this.namespace,
         Identifier.DEPARTMENT,
         {
-          deptId,
+          departmentId,
         },
       );
 

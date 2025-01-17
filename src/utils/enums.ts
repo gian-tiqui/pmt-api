@@ -38,8 +38,8 @@ enum EntityType {
 }
 
 enum CacheConfig {
-  TTL = 1000000,
-  MAX = 100,
+  TTL = 1,
+  MAX = 0,
 }
 
 enum Identifier {
@@ -53,6 +53,19 @@ enum Identifier {
   MENTION = 'single-mention',
   USER = 'single-user',
   LOG = 'single-log',
+
+  // BATCH
+
+  PROJECTS = 'projects',
+  WORKS = 'works',
+  TASKS = 'tasks',
+  SUBTASKS = 'subtasks',
+  COMMENTS = 'comments',
+  DEPARTMENTS = 'departments',
+  DIVISIONS = 'divisions',
+  MENTIONS = 'mentions',
+  USERS = 'users',
+  LOGS = 'logs',
 }
 
 enum Namespace {

@@ -58,11 +58,11 @@ export class DepartmentController {
     duration: 60,
     errorMessage: `Please wait before loading a department.`,
   })
-  @Get(':deptId')
+  @Get(':departmentId')
   findDepartment(
-    @Param('deptId', ParseIntPipe) deptId: number,
+    @Param('departmentId', ParseIntPipe) departmentId: number,
   ): Promise<FindDepartment> {
-    return this.departmentService.findDepartment(deptId);
+    return this.departmentService.findDepartment(departmentId);
   }
 
   @RateLimit({
@@ -71,12 +71,12 @@ export class DepartmentController {
     duration: 60,
     errorMessage: `Please wait before loading the department's users.`,
   })
-  @Get(':deptId/user')
+  @Get(':departmentId/user')
   findDepartmentUsers(
-    @Param('deptId', ParseIntPipe) deptId: number,
+    @Param('departmentId', ParseIntPipe) departmentId: number,
     @Query() query: FindAllDto,
   ): Promise<FindDepartmentUsers> {
-    return this.departmentService.findDepartmentUsers(deptId, query);
+    return this.departmentService.findDepartmentUsers(departmentId, query);
   }
 
   @RateLimit({
@@ -85,12 +85,12 @@ export class DepartmentController {
     duration: 60,
     errorMessage: `Please wait before loading the department's user.`,
   })
-  @Get(':deptId/user/:userId')
+  @Get(':departmentId/user/:userId')
   findDepartmentUser(
-    @Param('deptId', ParseIntPipe) deptId: number,
+    @Param('departmentId', ParseIntPipe) departmentId: number,
     @Param('userId', ParseIntPipe) userId: number,
   ): Promise<FindDepartmentUser> {
-    return this.departmentService.findDepartmentUser(deptId, userId);
+    return this.departmentService.findDepartmentUser(departmentId, userId);
   }
 
   @RateLimit({
@@ -99,12 +99,15 @@ export class DepartmentController {
     duration: 60,
     errorMessage: `Please wait before updating a department.`,
   })
-  @Patch(':deptId')
+  @Patch(':departmentId')
   updateDepartment(
-    @Param('deptId', ParseIntPipe) deptId: number,
+    @Param('departmentId', ParseIntPipe) departmentId: number,
     @Body() updateDepartmentDto: UpdateDepartmentDto,
   ): Promise<UpdateDepartment> {
-    return this.departmentService.updateDepartment(deptId, updateDepartmentDto);
+    return this.departmentService.updateDepartment(
+      departmentId,
+      updateDepartmentDto,
+    );
   }
 
   @RateLimit({
@@ -113,11 +116,11 @@ export class DepartmentController {
     duration: 60,
     errorMessage: `Please wait before deleting a department.`,
   })
-  @Delete(':deptId')
+  @Delete(':departmentId')
   removeDepartment(
-    @Param('deptId', ParseIntPipe) deptId: number,
+    @Param('departmentId', ParseIntPipe) departmentId: number,
     @Query('userId', ParseIntPipe) userId: number,
   ): Promise<RemoveDepartment> {
-    return this.departmentService.removeDepartment(deptId, userId);
+    return this.departmentService.removeDepartment(departmentId, userId);
   }
 }

@@ -21,7 +21,6 @@ import {
   Identifier,
   LogMethod,
   LogType,
-  Namespace,
   PaginationDefault,
 } from 'src/utils/enums';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
@@ -155,13 +154,9 @@ export class WorkService {
 
   async findWork(workId: number): Promise<FindWork> {
     let work: Work;
-    const findWorkCacheKey = generateCacheKey(
-      Namespace.GENERAL,
-      Identifier.WORK,
-      {
-        workId,
-      },
-    );
+    const findWorkCacheKey = generateCacheKey(this.namespace, Identifier.WORK, {
+      workId,
+    });
     const cachedWork: Work = await this.cacheManager.get(findWorkCacheKey);
 
     try {
@@ -269,11 +264,9 @@ export class WorkService {
   }
 
   async findWorkTask(workId: number, taskId: number): Promise<FindWorkTask> {
-    const workTaskCacheKey = generateCacheKey(
-      Namespace.GENERAL,
-      Identifier.TASK,
-      { taskId },
-    );
+    const workTaskCacheKey = generateCacheKey(this.namespace, Identifier.TASK, {
+      taskId,
+    });
 
     try {
       let task: Task;
@@ -376,7 +369,7 @@ export class WorkService {
         );
 
       const updateWorkCacheKey = generateCacheKey(
-        Namespace.GENERAL,
+        this.namespace,
         Identifier.WORK,
         {
           workId,
@@ -434,7 +427,7 @@ export class WorkService {
         );
 
       const deleteWorkCacheKey = generateCacheKey(
-        Namespace.GENERAL,
+        this.namespace,
         Identifier.WORK,
         {
           workId,
