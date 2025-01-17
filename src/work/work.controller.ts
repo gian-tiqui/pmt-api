@@ -8,7 +8,6 @@ import {
   Delete,
   ParseIntPipe,
   Query,
-  UseGuards,
 } from '@nestjs/common';
 import { WorkService } from './work.service';
 import { CreateWorkDto } from './dto/create-work.dto';
@@ -24,9 +23,7 @@ import {
   RemoveWork,
   UpdateWork,
 } from 'src/types/types';
-import { JwtAuthGuard } from 'src/auth/guards/auth.guard';
 
-@UseGuards(JwtAuthGuard)
 @Controller('work')
 export class WorkController {
   constructor(private readonly workService: WorkService) {}
