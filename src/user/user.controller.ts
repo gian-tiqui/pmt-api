@@ -112,6 +112,18 @@ export class UserController {
     return this.userService.findUserProject(userId, projectId);
   }
 
+  @Get(':userId/deadline-extension')
+  findUserDeadlineExtensions(
+    @Param('userId', ParseIntPipe) userId: number,
+    @Query() query: FindAllDto,
+  ) {}
+
+  @Get(':userId/deadline-extension/:deadlineExtensionId')
+  findUserDeadlineExtension(
+    @Param('userId', ParseIntPipe) userId: number,
+    @Param('deadlineExtensionId', ParseIntPipe) deadlineExtensionId: number,
+  ) {}
+
   @Patch(':userId')
   updateUser(
     @Param('userId', ParseIntPipe) userId: number,
