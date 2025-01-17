@@ -24,9 +24,7 @@ import {
   RemoveWork,
   UpdateWork,
 } from 'src/types/types';
-import { JwtAuthGuard } from 'src/auth/guards/auth.guard';
 
-@UseGuards(JwtAuthGuard)
 @Controller('work')
 export class WorkController {
   constructor(private readonly workService: WorkService) {}

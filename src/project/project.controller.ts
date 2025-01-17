@@ -8,7 +8,6 @@ import {
   Delete,
   Query,
   ParseIntPipe,
-  UseGuards,
 } from '@nestjs/common';
 import { ProjectService } from './project.service';
 import { CreateProjectDto } from './dto/create-project.dto';
@@ -24,9 +23,7 @@ import {
   RemoveProject,
   UpdateProject,
 } from 'src/types/types';
-import { JwtAuthGuard } from 'src/auth/guards/auth.guard';
 
-@UseGuards(JwtAuthGuard)
 @Controller('project')
 export class ProjectController {
   constructor(private readonly projectService: ProjectService) {}
