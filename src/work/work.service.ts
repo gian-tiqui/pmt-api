@@ -201,7 +201,7 @@ export class WorkService {
     const findWorkTasksCacheKey = generateCacheKey(
       this.namespace,
       'findWorkTasks',
-      query,
+      { ...query, workId },
     );
 
     try {
