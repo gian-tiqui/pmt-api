@@ -246,7 +246,7 @@ const seedUsers = async () => {
   await prismaClient.user.deleteMany();
 
   for (const user of users) {
-    const hashedPassword = await argon.hash('password1');
+    const hashedPassword = await argon.hash('abcd_123');
 
     await prismaClient.user.create({
       data: {

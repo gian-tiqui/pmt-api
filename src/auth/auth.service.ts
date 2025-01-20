@@ -56,18 +56,16 @@ export class AuthService {
   }
 
   async login(loginDto: LoginDto): Promise<Login> {
-    const { employeeId, password } = loginDto;
+    const { email, password } = loginDto;
 
     try {
       const user = await this.prismaService.user.findUnique({
-        where: { employeeId },
+        where: { email },
         include: { department: true },
       });
 
       if (!user)
-        throw new NotFoundException(
-          `User with the employee id ${employeeId} not found.`,
-        );
+        throw new NotFoundException(`User with the email:${email} not found.`);
 
       const passwordMatch = await argon.verify(user.password, password);
 
@@ -84,21 +82,21 @@ export class AuthService {
         user.department.code,
       );
 
-      let refreshToken, updateRefreshToken;
+      let refreshToken;
 
       if (user.refreshToken) refreshToken = user.refreshToken;
       else {
         refreshToken = await this.signRefreshToken(user.id);
-        updateRefreshToken = await this.prismaService.user.update({
+        await this.prismaService.user.update({
           where: { id: user.id },
           data: { refreshToken },
         });
-      }
 
-      if (!updateRefreshToken)
-        throw new BadRequestException(
-          `There was a problem in updating the refresh token.`,
-        );
+        return {
+          message: 'User tokens loaded successfully.',
+          tokens: { accessToken, refreshToken },
+        };
+      }
 
       return {
         message: 'User tokens loaded successfully.',
