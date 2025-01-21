@@ -64,13 +64,12 @@ export class AuthService {
         include: { department: true },
       });
 
-      if (!user)
-        throw new NotFoundException(`User with the email:${email} not found.`);
+      if (!user) throw new NotFoundException(`Email not found.`);
 
       const passwordMatch = await argon.verify(user.password, password);
 
       if (!passwordMatch)
-        throw new BadRequestException(`Passwords do not match`);
+        throw new BadRequestException(`You have entered the wrong password`);
 
       const accessToken = await this.signToken(
         user.id,

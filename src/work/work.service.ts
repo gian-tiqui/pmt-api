@@ -14,7 +14,6 @@ import {
   generateCacheKey,
   getPreviousValues,
   handleErrors,
-  validateParentAndChildDates,
 } from 'src/utils/functions';
 import { FindAllDto } from 'src/project/dto/find-all.dto';
 import {
@@ -73,8 +72,6 @@ export class WorkService {
         throw new NotFoundException(
           `Project with the id ${createWorkDto.projectId} not found.`,
         );
-
-      validateParentAndChildDates(createWorkDto, project, 'work', 'project');
 
       await this.prismaService.work.create({
         data: {
@@ -338,8 +335,6 @@ export class WorkService {
         throw new NotFoundException(
           `Project with the id ${work.projectId} not found.`,
         );
-
-      validateParentAndChildDates(updateWorkDto, project, 'work', 'project');
 
       const updatedWork = await this.prismaService.$transaction(
         async (prisma) => {
