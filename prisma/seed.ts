@@ -284,8 +284,6 @@ const seedProjectsAndWorks = async () => {
       data: {
         name: `${projectTitles[parseInt(String(projectIndex)[0], 10) - 1]} ${projectIndex}`,
         authorId: 4,
-        startDate: new Date(),
-        endDate: new Date(),
         description: `Project ${projectIndex} description,`,
       },
     });

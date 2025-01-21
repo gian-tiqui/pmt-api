@@ -12,7 +12,6 @@ import { FindAllDto } from './dto/find-all.dto';
 import {
   getPreviousValues,
   handleErrors,
-  firstDateGreaterThanSecondDate,
   generateCacheKey,
   clearKeys,
   findDataById,
@@ -52,12 +51,6 @@ export class ProjectService {
     createProjectDto: CreateProjectDto,
   ): Promise<CreateProject> {
     try {
-      firstDateGreaterThanSecondDate(
-        createProjectDto.startDate,
-        createProjectDto.endDate,
-        'Project',
-      );
-
       await findDataById(
         this.prismaService,
         createProjectDto.authorId,
@@ -355,12 +348,6 @@ export class ProjectService {
 
       if (!user)
         throw new NotFoundException(`User with the id ${projectId} not found.`);
-
-      firstDateGreaterThanSecondDate(
-        updateData.startDate,
-        updateData.endDate,
-        'Project',
-      );
 
       const { works, ...project } = _project;
 
