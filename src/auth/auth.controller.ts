@@ -24,7 +24,7 @@ export class AuthController {
   @RateLimit({
     keyPrefix: 'login',
     points: 10,
-    duration: 60,
+    duration: 10,
     errorMessage: 'Please wait before logging in again.',
   })
   @Post('login')

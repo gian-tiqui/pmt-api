@@ -396,7 +396,8 @@ export class UserService {
 
     try {
       const orderBy = sortBy ? { [sortBy]: sortOrder || 'asc' } : undefined;
-      const options = {
+
+      const where: object = {
         ...(status && { status }),
         ...(dateWithin && {
           AND: [
@@ -406,6 +407,17 @@ export class UserService {
         }),
         ...(authorId && { authorId }),
         authorId: userId,
+        ...(search && {
+          OR: [
+            { name: { contains: search.toLowerCase(), mode: 'insensitive' } },
+            {
+              description: {
+                contains: search.toLowerCase(),
+                mode: 'insensitive',
+              },
+            },
+          ],
+        }),
       };
 
       const user = await this.prismaService.user.findFirst({
@@ -416,40 +428,14 @@ export class UserService {
         throw new NotFoundException(`User with the id ${userId} not found.`);
 
       const projects = await this.prismaService.project.findMany({
-        where: {
-          ...options,
-          ...(search && {
-            OR: [
-              { name: { contains: search.toLowerCase(), mode: 'insensitive' } },
-              {
-                description: {
-                  contains: search.toLowerCase(),
-                  mode: 'insensitive',
-                },
-              },
-            ],
-          }),
-        },
+        where,
         orderBy,
         skip: offset || PaginationDefault.OFFSET,
         take: limit || PaginationDefault.LIMIT,
       });
 
       const count = await this.prismaService.project.count({
-        where: {
-          ...options,
-          ...(search && {
-            OR: [
-              { name: { contains: search.toLowerCase(), mode: 'insensitive' } },
-              {
-                description: {
-                  contains: search.toLowerCase(),
-                  mode: 'insensitive',
-                },
-              },
-            ],
-          }),
-        },
+        where,
       });
 
       return { message: 'Projects loaded successfully.', count, projects };
