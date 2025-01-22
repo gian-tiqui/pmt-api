@@ -54,7 +54,7 @@ export class ProjectController {
 
   @RateLimit({
     keyPrefix: 'get-project',
-    points: 10,
+    points: 50,
     duration: 60,
     errorMessage: 'Please wait before loading a project.',
   })
