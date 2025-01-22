@@ -13,11 +13,10 @@ import { AuthModule } from './auth/auth.module';
 import { CacheModule } from '@nestjs/cache-manager';
 import { DivisionModule } from './division/division.module';
 import { CacheConfig } from './utils/enums';
-import { LoggerMiddleware } from './middleware/logger.middleware';
+import { DelayMiddleware } from './middleware/delay.middleware';
 
 @Module({
   imports: [
-    // Cache Removal starts here
     CacheModule.register({
       ttl: CacheConfig.TTL,
       max: CacheConfig.MAX,
@@ -45,6 +44,6 @@ import { LoggerMiddleware } from './middleware/logger.middleware';
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(LoggerMiddleware).forRoutes();
+    consumer.apply(DelayMiddleware).forRoutes('*');
   }
 }

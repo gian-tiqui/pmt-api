@@ -22,7 +22,7 @@ export class CreateProjectDto {
   @Type(() => Date)
   endDate: Date;
 
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
   description: string;
 
